@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mireb Commercial - CRM AI</title>
+    <meta name="description" content="Plateforme CRM commerciale avec intelligence artificielle pour Mireb Commercial - Congo">
+    <meta name="theme-color" content="#ea580c">
+    
+    <!-- Fallback content -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ea580c, #dc2626);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .loading {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .btn {
+            background: white;
+            color: #ea580c;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏪 Mireb Commercial</div>
+        <h1>CRM avec Intelligence Artificielle</h1>
+        <p>Bienvenue sur votre plateforme CRM complète</p>
+        
+        <!-- Actions principales -->
+        <div style="margin-top: 2rem;">
+            <a href="./mireb-ai-crm-complete.html" class="btn">
+                🚀 Accéder à l'application CRM
+            </a>
+            <a href="./diagnostic-frontend.html" class="btn" style="background: rgba(255,255,255,0.2); color: white;">
+                🔧 Diagnostic système
+            </a>
+        </div>
+        
+        <div style="margin-top: 2rem; font-size: 0.9rem; opacity: 0.8;">
+            <p>🇨🇩 Plateforme e-commerce pour le Congo</p>
+            <p>📞 Contact: +243842267252</p>
+            <p>💻 Serveur: <span id="status">Vérification...</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Vérification automatique du statut du serveur
+        fetch('http://localhost:5000/api/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerHTML = '✅ En ligne';
+                document.getElementById('status').style.color = '#00ff00';
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = '❌ Hors ligne';
+                document.getElementById('status').style.color = '#ff6666';
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Guide - Écran Catégories</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-center mb-4">
+                🧪 Test Guide - Écran Catégories
+            </h1>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h2 class="text-lg font-bold text-blue-800 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>Instructions de Test
+                </h2>
+                <p class="text-blue-700">
+                    Suivez les étapes ci-dessous pour tester la fonctionnalité <strong>Écran Catégories</strong> 
+                    de l'application Mireb Commercial.
+                </p>
+            </div>
+        </div>
+
+        <!-- Application Link -->
+        <div class="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg shadow p-6 mb-6 text-white">
+            <h2 class="text-xl font-bold mb-3">
+                <i class="fas fa-rocket mr-2"></i>Lancer l'Application
+            </h2>
+            <a href="./mireb-ai-crm-complete.html" target="_blank" 
+               class="bg-white text-orange-600 px-6 py-3 rounded-lg font-bold inline-block hover:bg-gray-100 transition-colors">
+                🚀 Ouvrir Mireb Commercial
+            </a>
+            <p class="mt-3 text-orange-100">
+                <i class="fas fa-lightbulb mr-1"></i>
+                Conseil: Ouvrez dans un nouvel onglet pour garder ce guide visible
+            </p>
+        </div>
+
+        <!-- Test Steps -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-th-large mr-2 text-orange-500"></i>
+                    Test #2: Écran Catégories
+                </h2>
+
+                <div class="space-y-4">
+                    <!-- Step 1 -->
+                    <div class="border-l-4 border-orange-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step1">
+                            <label for="step1">1. Navigation vers Catégories</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Dans l'app, regarder la navigation en bas</li>
+                            <li>• Cliquer sur le bouton <strong>"Catégories"</strong> (icône grille)</li>
+                            <li>• Vérifier que l'écran change</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Navigation vers un nouvel écran avec header "Catégories"
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step2">
+                            <label for="step2">2. Filtres par catégorie</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Observer les boutons de catégories en haut</li>
+                            <li>• Cliquer sur différentes catégories (ex: "Électronique", "Mode", etc.)</li>
+                            <li>• Vérifier que les produits se filtrent</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Filtrage dynamique des produits selon la catégorie
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step3">
+                            <label for="step3">3. Compteur de produits</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Observer les boutons de catégories</li>
+                            <li>• Vérifier qu'il y a un nombre entre parenthèses (ex: "Mode (5)")</li>
+                            <li>• Comparer avec le nombre de produits affichés</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Compteur correct du nombre de produits par catégorie
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="border-l-4 border-red-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step4">
+                            <label for="step4">4. Sélection de produit</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Cliquer sur une carte produit</li>
+                            <li>• Vérifier la redirection vers la page détail</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Navigation vers la page détail du produit
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="border-l-4 border-yellow-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step5">
+                            <label for="step5">5. Bouton retour</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Dans l'écran Catégories, regarder le header</li>
+                            <li>• Cliquer sur le bouton retour (flèche gauche)</li>
+                            <li>• Vérifier le retour à l'accueil</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Retour à la page d'accueil
+                        </div>
+                    </div>
+
+                    <!-- Step 6 -->
+                    <div class="border-l-4 border-gray-500 pl-4">
+                        <h3 class="font-bold text-lg mb-2">
+                            <input type="checkbox" class="mr-2" id="step6">
+                            <label for="step6">6. État vide</label>
+                        </h3>
+                        <ul class="ml-6 space-y-1 text-gray-700">
+                            <li>• Essayer de trouver une catégorie sans produits</li>
+                            <li>• Ou supprimer temporairement des produits via admin</li>
+                            <li>• Vérifier l'affichage du message d'état vide</li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                            <strong>✅ Résultat attendu:</strong> Message "Aucun produit dans cette catégorie" avec icône
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-clipboard-check mr-2 text-green-500"></i>
+                    Résultats du Test
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <h3 class="font-bold text-green-800 mb-2">✅ Fonctionnalités OK</h3>
+                        <ul class="text-green-700 space-y-1 text-sm">
+                            <li id="result-step1" class="hidden">• Navigation vers Catégories</li>
+                            <li id="result-step2" class="hidden">• Filtres par catégorie</li>
+                            <li id="result-step3" class="hidden">• Compteur de produits</li>
+                            <li id="result-step4" class="hidden">• Sélection de produit</li>
+                            <li id="result-step5" class="hidden">• Bouton retour</li>
+                            <li id="result-step6" class="hidden">• État vide</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h3 class="font-bold text-red-800 mb-2">❌ Problèmes détectés</h3>
+                        <textarea class="w-full h-20 p-2 border rounded text-sm" 
+                                  placeholder="Notez ici les problèmes rencontrés..."></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <button onclick="generateReport()" 
+                            class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700">
+                        📊 Générer Rapport de Test
+                    </button>
+                </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="bg-gradient-to-r from-green-500 to-blue-500 rounded-lg shadow p-6 text-white">
+                <h2 class="text-xl font-bold mb-3">
+                    <i class="fas fa-arrow-right mr-2"></i>Prochaines Étapes
+                </h2>
+                <p class="mb-4">Une fois ce test terminé, passez aux autres fonctionnalités :</p>
+                <div class="grid md:grid-cols-3 gap-3">
+                    <button class="bg-white bg-opacity-20 p-3 rounded-lg text-center hover:bg-opacity-30">
+                        <i class="fas fa-user mb-2 block text-2xl"></i>
+                        <strong>Test #3</strong><br>
+                        Écran Profil
+                    </button>
+                    <button class="bg-white bg-opacity-20 p-3 rounded-lg text-center hover:bg-opacity-30">
+                        <i class="fas fa-cloud-upload-alt mb-2 block text-2xl"></i>
+                        <strong>Test #4</strong><br>
+                        Upload Cloudinary
+                    </button>
+                    <button class="bg-white bg-opacity-20 p-3 rounded-lg text-center hover:bg-opacity-30">
+                        <i class="fas fa-cog mb-2 block text-2xl"></i>
+                        <strong>Test #5</strong><br>
+                        Interface Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestion des checkboxes et résultats
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const resultElement = document.getElementById('result-' + this.id);
+                if (resultElement) {
+                    if (this.checked) {
+                        resultElement.classList.remove('hidden');
+                    } else {
+                        resultElement.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        function generateReport() {
+            const checkedSteps = document.querySelectorAll('input[type="checkbox"]:checked').length;
+            const totalSteps = document.querySelectorAll('input[type="checkbox"]').length;
+            const problems = document.querySelector('textarea').value;
+            
+            const report = `
+🧪 RAPPORT DE TEST - ÉCRAN CATÉGORIES
+=====================================
+
+✅ Tests réussis: ${checkedSteps}/${totalSteps}
+📊 Taux de réussite: ${Math.round((checkedSteps/totalSteps)*100)}%
+
+${problems ? '❌ Problèmes identifiés:\n' + problems : '🎉 Aucun problème détecté!'}
+
+📅 Date: ${new Date().toLocaleDateString('fr-FR')}
+⏰ Heure: ${new Date().toLocaleTimeString('fr-FR')}
+            `;
+            
+            // Copier dans le presse-papier
+            navigator.clipboard.writeText(report).then(() => {
+                alert('📋 Rapport copié dans le presse-papier!');
+            });
+        }
+    </script>
+</body>
+</html>

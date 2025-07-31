@@ -1,0 +1,334 @@
+import express from 'express';
+import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import path from 'path';
+
+const router = express.Router();
+
+// Configuration Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dwogv9nme',
+  api_key: process.env.CLOUDINARY_API_KEY || '',
+  api_secret: process.env.CLOUDINARY_API_SECRET || ''
+});
+
+// Configuration Multer pour le stockage temporaire
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB par défaut
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/png,image/gif,image/webp')
+      .split(',');
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Type de fichier non autorisé'), false);
+    }
+  }
+});
+
+// POST /api/upload/single - Upload d'un fichier unique
+router.post('/single', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucun fichier fourni'
+      });
+    }
+
+    // Options d'upload Cloudinary
+    const uploadOptions = {
+      folder: req.body.folder || 'mireb-uploads',
+      resource_type: 'auto',
+      quality: 'auto',
+      fetch_format: 'auto'
+    };
+
+    // Si c'est une image, ajouter des transformations
+    if (req.file.mimetype.startsWith('image/')) {
+      uploadOptions.transformation = [
+        { quality: 'auto' },
+        { fetch_format: 'auto' }
+      ];
+    }
+
+    // Upload vers Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }).end(req.file.buffer);
+    });
+
+    res.json({
+      success: true,
+      message: 'Fichier uploadé avec succès',
+      data: {
+        url: result.secure_url,
+        publicId: result.public_id,
+        originalName: req.file.originalname,
+        format: result.format,
+        size: result.bytes,
+        width: result.width,
+        height: result.height
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur upload:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'upload',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/upload/multiple - Upload de plusieurs fichiers
+router.post('/multiple', upload.array('files', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucun fichier fourni'
+      });
+    }
+
+    const uploadPromises = req.files.map(file => {
+      const uploadOptions = {
+        folder: req.body.folder || 'mireb-uploads',
+        resource_type: 'auto',
+        quality: 'auto',
+        fetch_format: 'auto'
+      };
+
+      return new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+          if (error) {
+            reject({ file: file.originalname, error: error.message });
+          } else {
+            resolve({
+              originalName: file.originalname,
+              url: result.secure_url,
+              publicId: result.public_id,
+              format: result.format,
+              size: result.bytes,
+              width: result.width,
+              height: result.height
+            });
+          }
+        }).end(file.buffer);
+      });
+    });
+
+    const results = await Promise.allSettled(uploadPromises);
+    
+    const successful = results
+      .filter(result => result.status === 'fulfilled')
+      .map(result => result.value);
+    
+    const failed = results
+      .filter(result => result.status === 'rejected')
+      .map(result => result.reason);
+
+    res.json({
+      success: true,
+      message: `${successful.length} fichier(s) uploadé(s) avec succès`,
+      data: {
+        successful,
+        failed,
+        total: req.files.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur upload multiple:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'upload multiple',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/upload/:publicId - Supprimer un fichier
+router.delete('/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    
+    if (!publicId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Public ID requis'
+      });
+    }
+
+    const result = await cloudinary.uploader.destroy(publicId);
+    
+    if (result.result === 'ok') {
+      res.json({
+        success: true,
+        message: 'Fichier supprimé avec succès'
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Fichier non trouvé'
+      });
+    }
+
+  } catch (error) {
+    console.error('Erreur suppression:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/upload/images - Lister les images uploadées
+router.get('/images', async (req, res) => {
+  try {
+    const folder = req.query.folder || 'mireb-uploads';
+    const maxResults = parseInt(req.query.max_results) || 50;
+    
+    const result = await cloudinary.search
+      .expression(`folder:${folder}`)
+      .sort_by([['created_at', 'desc']])
+      .max_results(maxResults)
+      .execute();
+
+    const images = result.resources.map(resource => ({
+      publicId: resource.public_id,
+      url: resource.secure_url,
+      format: resource.format,
+      size: resource.bytes,
+      width: resource.width,
+      height: resource.height,
+      createdAt: resource.created_at
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        images,
+        total: result.total_count
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur liste images:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des images',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/upload/transform - Transformer une image existante
+router.post('/transform', async (req, res) => {
+  try {
+    const { publicId, transformations } = req.body;
+    
+    if (!publicId || !transformations) {
+      return res.status(400).json({
+        success: false,
+        message: 'Public ID et transformations requis'
+      });
+    }
+
+    // Générer l'URL transformée
+    const transformedUrl = cloudinary.url(publicId, {
+      transformation: transformations,
+      secure: true
+    });
+
+    res.json({
+      success: true,
+      data: {
+        originalPublicId: publicId,
+        transformedUrl,
+        transformations
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur transformation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la transformation',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/upload/quota - Informations sur le quota Cloudinary
+router.get('/quota', async (req, res) => {
+  try {
+    // Note: Cloudinary ne fournit pas directement les informations de quota via l'API
+    // Ceci est une simulation - en production, vous devriez consulter votre dashboard Cloudinary
+    
+    const quotaInfo = {
+      plan: 'Free', // ou récupérer depuis les variables d'environnement
+      usage: {
+        transformations: Math.floor(Math.random() * 25000), // Simulation
+        bandwidth: Math.floor(Math.random() * 25 * 1024 * 1024 * 1024), // 25GB en bytes
+        storage: Math.floor(Math.random() * 25 * 1024 * 1024 * 1024) // 25GB en bytes
+      },
+      limits: {
+        transformations: 25000,
+        bandwidth: 25 * 1024 * 1024 * 1024, // 25GB
+        storage: 25 * 1024 * 1024 * 1024 // 25GB
+      }
+    };
+
+    res.json({
+      success: true,
+      data: quotaInfo
+    });
+
+  } catch (error) {
+    console.error('Erreur quota:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération du quota',
+      error: error.message
+    });
+  }
+});
+
+// Middleware de gestion d'erreurs pour Multer
+router.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Fichier trop volumineux'
+      });
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Trop de fichiers'
+      });
+    }
+  }
+  
+  if (error.message === 'Type de fichier non autorisé') {
+    return res.status(400).json({
+      success: false,
+      message: 'Type de fichier non autorisé'
+    });
+  }
+  
+  next(error);
+});
+
+export default router;

@@ -1,0 +1,5 @@
+# Redirections Netlify pour CRM Mireb - Spécifiques seulement
+/app              /mireb-ai-crm-complete.html   301
+/crm              /mireb-ai-crm-complete.html   301
+/dashboard        /mireb-ai-crm-complete.html   301
+/admin            /mireb-ai-crm-complete.html   301

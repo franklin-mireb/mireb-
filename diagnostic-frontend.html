@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mireb CRM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ea580c, #dc2626);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            border-left: 4px solid #fff;
+        }
+        .success { background: rgba(0,255,0,0.2); border-color: #00ff00; }
+        .error { background: rgba(255,0,0,0.2); border-color: #ff0000; }
+        .info { background: rgba(0,0,255,0.2); border-color: #0099ff; }
+        button {
+            background: #fff;
+            color: #ea580c;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 0.5rem;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        #results {
+            margin-top: 2rem;
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Diagnostic Mireb CRM</h1>
+        
+        <div class="status info">
+            <strong>Instructions :</strong> Cliquez sur les boutons ci-dessous pour tester la connectivité avec le backend.
+        </div>
+
+        <div class="status info">
+            <strong>URLs de test :</strong><br>
+            • Frontend: <a href="http://localhost:3000" style="color: #fff;">http://localhost:3000</a><br>
+            • Backend: <a href="http://localhost:5000" style="color: #fff;">http://localhost:5000</a><br>
+            • Application principale: <a href="./mireb-ai-crm-complete.html" style="color: #fff;">Accéder à l'app</a>
+        </div>
+
+        <div>
+            <button onclick="testBackend()">Test Backend Health</button>
+            <button onclick="testAuth()">Test Authentification</button>
+            <button onclick="testProducts()">Test Produits</button>
+            <button onclick="testAll()">Test Complet</button>
+            <button onclick="clearResults()">Effacer</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:5000';
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'success' ? '#00ff00' : type === 'error' ? '#ff6666' : '#ffffff';
+            resultsDiv.innerHTML += `<div style="color: ${color}; margin: 5px 0;">[${timestamp}] ${message}</div>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testBackend() {
+            log('🔍 Test de connectivité backend...', 'info');
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Backend accessible !', 'success');
+                    log(`📊 Status: ${data.message}`, 'success');
+                    log(`💾 Database: ${data.database}`, 'success');
+                } else {
+                    log(`❌ Erreur HTTP: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur de connexion: ${error.message}`, 'error');
+                log('💡 Vérifiez que le backend est démarré sur le port 5000', 'info');
+            }
+        }
+
+        async function testAuth() {
+            log('🔐 Test d\\'authentification...', 'info');
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@mireb.com',
+                        password: 'admin123'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Authentification réussie !', 'success');
+                    log(`👤 Utilisateur: ${data.data.user.nom}`, 'success');
+                    log(`🎫 Token: ${data.data.token.substring(0, 20)}...`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    log(`❌ Échec authentification: ${errorData.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur auth: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProducts() {
+            log('📦 Test de l\\'API produits...', 'info');
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/produits`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ API produits accessible !', 'success');
+                    log(`📊 Nombre de produits: ${data.data.length}`, 'success');
+                    if (data.data.length > 0) {
+                        log(`🏷️ Premier produit: ${data.data[0].nom}`, 'success');
+                    }
+                } else {
+                    log(`❌ Erreur API produits: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erreur produits: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAll() {
+            log('🚀 Test complet en cours...', 'info');
+            await testBackend();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAuth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testProducts();
+            log('✅ Test complet terminé !', 'success');
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            log('📱 Page de diagnostic chargée', 'success');
+            log('🔧 Prêt pour les tests de connectivité', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "mirebcommercial",
+  "version": "1.0.0",
+  "description": "Mireb Commercial - AI & CRM Enhanced Platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve -s . -l 3000",
+    "build": "echo 'Static HTML/CSS/JS - no build step required' && exit 0",
+    "deploy": "gh-pages -d .",
+    "dev": "serve -s . -l 3000",
+    "vercel-build": "echo 'No build step needed for static site'"
+  },
+  "keywords": [
+    "crm",
+    "ai",
+    "ecommerce",
+    "mireb",
+    "commercial"
+  ],
+  "author": "Franklin Mireb",
+  "license": "MIT",
+  "homepage": "https://franklin-mireb.github.io/mireb-/",
+  "dependencies": {
+    "serve": "^14.2.1"
+  },
+  "devDependencies": {
+    "gh-pages": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

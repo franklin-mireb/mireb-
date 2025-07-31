@@ -1,0 +1,286 @@
+import express from 'express';
+import OpenAI from 'openai';
+import { auth, requireAdmin } from '../middleware/auth.js.js.js';
+import { validate, schemas } from '../middleware/validation.js.js.js';
+
+const router = express.Router();
+// Configuration OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || ''
+});
+// @route   POST api/openai/generate-description
+// @desc    Generate product description using AI
+// @access  Private (Admin)
+router.post('/generate-description', [auth, requireAdmin, validate(schemas.generateDescription)], async (req, res) => {
+  try {
+    const { nom, categorie, prix, image, features = [], target = 'general' } = req.body;
+    // Vérifier si OpenAI est configuré
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service OpenAI non configuré',
+        fallback: generateFallbackDescription({ nom, categorie, prix, features, target })
+      });
+    }
+    // Construire le prompt pour OpenAI
+    const prompt = buildDescriptionPrompt({ nom, categorie, prix, image, features, target });
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `Tu es un expert en marketing et rédaction commerciale. Tu écris des descriptions de produits persuasives et attrayantes en français. 
+                     Tes descriptions sont optimisées pour la vente en ligne et incluent des éléments émotionnels et techniques.
+                     Format: HTML simple avec <p>, <b>, <ul>, <li>. Maximum 200 mots.`
+          },
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
+        presence_penalty: 0.6,
+        frequency_penalty: 0.3
+      const aiDescription = completion.choices[0]?.message?.content?.trim();
+      if (!aiDescription) {
+        throw new Error('Aucune description générée par OpenAI');
+      }
+      // Nettoyer et valider la description
+      const cleanDescription = cleanAndValidateDescription(aiDescription);
+      res.json({
+        success: true,
+        description: cleanDescription,
+        generated_by: 'openai',
+        prompt_info: {
+          product: nom,
+          category: categorie,
+          target_audience: target
+        }
+    } catch (openaiError) {
+      console.error('Erreur OpenAI:', openaiError);
+      
+      // Fallback en cas d'erreur OpenAI
+      const fallbackDescription = generateFallbackDescription({ nom, categorie, prix, features, target });
+        description: fallbackDescription,
+        generated_by: 'fallback',
+        warning: 'OpenAI indisponible, description générée automatiquement',
+        error: openaiError.message
+  } catch (error) {
+    console.error('Erreur génération description:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la génération de la description',
+      error: error.message
+    });
+  }
+// @route   POST api/openai/analyze-image
+// @desc    Analyze product image to extract features
+router.post('/analyze-image', [auth, requireAdmin], async (req, res) => {
+    const { imageUrl, productName } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({
+        message: 'URL de l\'image requise'
+        fallback: generateImageAnalysisFallback(productName)
+        model: 'gpt-4-vision-preview',
+            content: `Tu es un expert en analyse de produits. Analyse cette image de produit et extrait:
+                     1. Caractéristiques visibles
+                     2. Couleurs principales
+                     3. Matériaux apparents
+                     4. Style/design
+                     5. Points de vente clés
+                     Réponds en JSON avec ces propriétés: features, colors, materials, style, selling_points`
+            content: [
+              {
+                type: 'text',
+                text: `Analyse cette image du produit "${productName || 'produit'}". Extrait les caractéristiques visibles pour créer une description commerciale.`
+              },
+                type: 'image_url',
+                image_url: {
+                  url: imageUrl,
+                  detail: 'low'
+                }
+              }
+            ]
+        max_tokens: 500,
+        temperature: 0.3
+      const analysisText = completion.choices[0]?.message?.content?.trim();
+      if (!analysisText) {
+        throw new Error('Aucune analyse générée');
+      // Essayer de parser le JSON
+      let analysis;
+      try {
+        analysis = JSON.parse(analysisText);
+      } catch (parseError) {
+        // Si ce n'est pas du JSON, traiter comme du texte
+        analysis = parseTextAnalysis(analysisText);
+        analysis: analysis,
+        generated_by: 'openai_vision',
+        model: 'gpt-4-vision-preview'
+    } catch (visionError) {
+      console.error('Erreur Vision OpenAI:', visionError);
+        analysis: generateImageAnalysisFallback(productName),
+        warning: 'Analyse d\'image indisponible, analyse générique fournie'
+    console.error('Erreur analyse image:', error);
+      message: 'Erreur lors de l\'analyse de l\'image',
+// @route   POST api/openai/optimize-tags
+// @desc    Generate optimized SEO tags for product
+router.post('/optimize-tags', [auth, requireAdmin], async (req, res) => {
+    const { nom, categorie, description } = req.body;
+    if (!nom) {
+        message: 'Nom du produit requis'
+    const fallbackTags = generateFallbackTags({ nom, categorie, description });
+      return res.json({
+        tags: fallbackTags,
+        message: 'Tags générés automatiquement (OpenAI non configuré)'
+      const prompt = `Génère 8-12 tags SEO optimisés pour ce produit:
+                     Nom: ${nom}
+                     Catégorie: ${categorie || 'non spécifiée'}
+                     Description: ${description || 'non fournie'}
+                     
+                     Les tags doivent être:
+                     - Pertinents pour la recherche
+                     - Variés (marque, type, utilisation, public cible)
+                     - En français
+                     - Séparés par des virgules
+                     - Sans caractères spéciaux`;
+            content: 'Tu es un expert SEO. Génère des tags pertinents pour l\'e-commerce.'
+        max_tokens: 150,
+        temperature: 0.5
+      const aiTags = completion.choices[0]?.message?.content?.trim();
+      if (!aiTags) {
+        throw new Error('Aucun tag généré');
+      const tags = aiTags
+        .split(',')
+        .map(tag => tag.trim().toLowerCase())
+        .filter(tag => tag.length > 2 && tag.length < 30)
+        .slice(0, 12);
+        tags: tags,
+        model: 'gpt-3.5-turbo'
+    } catch (tagsError) {
+      console.error('Erreur génération tags:', tagsError);
+        warning: 'OpenAI indisponible, tags générés automatiquement'
+    console.error('Erreur optimisation tags:', error);
+      message: 'Erreur lors de l\'optimisation des tags',
+// Fonctions utilitaires
+function buildDescriptionPrompt({ nom, categorie, prix, image, features, target }) {
+  let prompt = `Écris une description commerciale attractive pour ce produit:
+PRODUIT: ${nom}`;
+  if (categorie) prompt += `\nCATÉGORIE: ${categorie}`;
+  if (prix) prompt += `\nPRIX: ${prix}$`;
+  if (features.length > 0) prompt += `\nCARACTÉRISTIQUES: ${features.join(', ')}`;
+  
+  prompt += `\nPUBLIC CIBLE: ${target}`;
+  if (image) prompt += `\nIMAGE DISPONIBLE: ${image}`;
+  prompt += `
+CONSIGNES:
+- Description persuasive et professionnelle
+- Mettre en avant les bénéfices client
+- Utiliser des mots-clés pertinents
+- Inclure un appel à l'action subtil
+- Format HTML simple (<p>, <b>, <ul>, <li>)
+- 150-200 mots maximum`;
+  return prompt;
+}
+function generateFallbackDescription({ nom, categorie, prix, features, target }) {
+  const targetMap = {
+    jeune: 'les jeunes',
+    adulte: 'les adultes',
+    senior: 'les seniors',
+    professionnel: 'les professionnels',
+    general: 'tous'
+  };
+  const targetText = targetMap[target] || 'tous';
+  let description = `<p><b>${nom}</b> - Un produit de qualité`;
+  if (categorie) {
+    description += ` dans la catégorie ${categorie}`;
+  description += ` conçu pour ${targetText}.</p>`;
+  if (features.length > 0) {
+    description += `<p><b>Caractéristiques principales :</b></p><ul>`;
+    features.slice(0, 4).forEach(feature => {
+      description += `<li>${feature}</li>`;
+    description += `</ul>`;
+  description += `<p>Découvrez ce produit exceptionnel qui combine qualité, design et fonctionnalité. `;
+  if (prix) {
+    description += `Disponible au prix de <b>${prix}$</b>, `;
+  description += `c'est l'investissement parfait pour votre satisfaction.</p>`;
+  return description;
+function generateImageAnalysisFallback(productName) {
+  return {
+    features: ['Design moderne', 'Qualité premium', 'Finition soignée'],
+    colors: ['Couleurs attrayantes'],
+    materials: ['Matériaux de qualité'],
+    style: 'Style contemporain',
+    selling_points: [
+      'Esthétique soignée',
+      'Conception réfléchie',
+      'Valeur exceptionnelle'
+    ]
+function generateFallbackTags({ nom, categorie, description }) {
+  const tags = [];
+  // Tags basés sur le nom
+  const nameWords = nom.toLowerCase().split(' ').filter(word => word.length > 2);
+  tags.push(...nameWords);
+  // Tags de catégorie
+    tags.push(categorie.toLowerCase());
+  // Tags génériques utiles
+  tags.push('qualité', 'design', 'moderne', 'premium', 'tendance');
+  // Supprimer les doublons et limiter
+  return [...new Set(tags)].slice(0, 10);
+function parseTextAnalysis(text) {
+    features: extractFeatures(text),
+    colors: extractColors(text),
+    materials: extractMaterials(text),
+    style: extractStyle(text),
+    selling_points: extractSellingPoints(text)
+function extractFeatures(text) {
+  const features = [];
+  const keywords = ['caractéristique', 'feature', 'propriété', 'aspect', 'élément'];
+  // Logique d'extraction simple basée sur des mots-clés
+  if (text.toLowerCase().includes('moderne')) features.push('Design moderne');
+  if (text.toLowerCase().includes('qualité')) features.push('Haute qualité');
+  if (text.toLowerCase().includes('durable')) features.push('Durabilité');
+  return features.length > 0 ? features : ['Caractéristiques de qualité'];
+function extractColors(text) {
+  const colors = [];
+  const colorKeywords = ['rouge', 'bleu', 'vert', 'noir', 'blanc', 'gris', 'rose', 'jaune', 'orange', 'violet'];
+  colorKeywords.forEach(color => {
+    if (text.toLowerCase().includes(color)) {
+      colors.push(color);
+  });
+  return colors.length > 0 ? colors : ['Couleurs variées'];
+function extractMaterials(text) {
+  const materials = [];
+  const materialKeywords = ['métal', 'plastique', 'bois', 'verre', 'cuir', 'tissu', 'coton', 'acier'];
+  materialKeywords.forEach(material => {
+    if (text.toLowerCase().includes(material)) {
+      materials.push(material);
+  return materials.length > 0 ? materials : ['Matériaux de qualité'];
+function extractStyle(text) {
+  if (text.toLowerCase().includes('moderne')) return 'Moderne';
+  if (text.toLowerCase().includes('classique')) return 'Classique';
+  if (text.toLowerCase().includes('vintage')) return 'Vintage';
+  if (text.toLowerCase().includes('élégant')) return 'Élégant';
+  return 'Style contemporain';
+function extractSellingPoints(text) {
+  const points = [];
+  if (text.toLowerCase().includes('qualité')) points.push('Haute qualité');
+  if (text.toLowerCase().includes('durable')) points.push('Durabilité exceptionnelle');
+  if (text.toLowerCase().includes('pratique')) points.push('Très pratique');
+  if (text.toLowerCase().includes('design')) points.push('Design attrayant');
+  return points.length > 0 ? points : ['Excellent rapport qualité-prix', 'Design soigné', 'Satisfaction garantie'];
+function cleanAndValidateDescription(description) {
+  // Nettoyer la description
+  let cleaned = description
+    .trim()
+    .replace(/```html/g, '')
+    .replace(/```/g, '')
+    .replace(/\n\s*\n/g, '\n');
+  // Valider les balises HTML de base
+  const allowedTags = ['p', 'b', 'strong', 'i', 'em', 'ul', 'ol', 'li', 'br'];
+  // Si pas de balises HTML, ajouter des <p>
+  if (!cleaned.includes('<')) {
+    const paragraphs = cleaned.split('\n').filter(p => p.trim());
+    cleaned = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+  return cleaned;
+export default router;

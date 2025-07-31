@@ -1,0 +1,56 @@
+# Netlify Configuration pour CRM Mireb
+[build]
+  publish = "."
+  command = "echo 'Static site - no build needed'"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirections pour l'application CRM (spécifiques d'abord)
+[[redirects]]
+  from = "/app"
+  to = "/mireb-ai-crm-complete.html"
+  status = 301
+
+[[redirects]]
+  from = "/crm"
+  to = "/mireb-ai-crm-complete.html"
+  status = 301
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/mireb-ai-crm-complete.html"
+  status = 301
+
+# SPA routing pour les sous-pages du CRM
+[[redirects]]
+  from = "/mireb-ai-crm-complete.html/*"
+  to = "/mireb-ai-crm-complete.html"
+  status = 200
+
+# Laisser index.html se charger normalement (PAS de redirection globale)
+
+# Headers de sécurité et performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; img-src 'self' data: https: blob: *.cloudinary.com; font-src 'self' data: https: fonts.gstatic.com; connect-src 'self' https: wss: *.cloudinary.com;"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300, must-revalidate"
