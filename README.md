@@ -1,23 +1,20 @@
-# Mireb Commercial - AI & CRM Enhanced
+# 🏪 Mireb CRM - Système de Gestion Commerciale
 
-## 🚀 Plateforme E-commerce avec IA et CRM intégré
+[![Deploy Status](https://img.shields.io/badge/Deploy-GitHub%20Pages-brightgreen)](https://franklin-mireb.github.io/mireb-crm/)
+[![Version](https://img.shields.io/badge/Version-2.0.0-blue)](https://github.com/franklin-mireb/mireb-crm)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-Mireb Commercial est une plateforme e-commerce moderne intégrant l'Intelligence Artificielle et un système CRM complet pour optimiser les ventes et la gestion client.
+## 🎯 À Propos
 
-## ✨ Fonctionnalités principales
+Mireb CRM est un système de gestion commerciale moderne avec authentification sécurisée, conçu pour la gestion efficace des produits, clients et ventes.
 
-### 🛍️ E-commerce
-- Catalogue produits responsive
-- Système de catégories
-- Recherche intelligente avec IA
-- Gestion du stock en temps réel
-- Interface mobile-first
+## 🚀 Démo en Ligne
 
-### 🤖 Intelligence Artificielle
-- Assistant IA conversationnel (OpenAI GPT)
-- Recommandations personnalisées
-- Génération automatique de descriptions produits
-- Analyse prédictive des ventes
+**🌐 [Accéder à la Demo](https://franklin-mireb.github.io/mireb-crm/)**
+
+### 🔑 Identifiants de Test
+- **Email** : `mirebshop@gmail.com`
+- **Mot de passe** : `Fiacre-19`
 
 ### 📊 CRM Intégré
 - Gestion des leads automatisée
