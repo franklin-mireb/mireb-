@@ -1110,13 +1110,20 @@ class OpenAIService {
   static async generateProductDescription(productData) {
     try {
       const response = await APIService.post('/openai/generate-description', productData);
-      return response.data.description;
+      // Correction: l'API renvoie response.data.data.description
+      const description = response.data?.data?.description || response.data?.description;
+      
+      if (!description) {
+        throw new Error('Description non trouvée dans la réponse API');
+      }
+      
+      return description;
     } catch (error) {
       console.error('Description Generation Error:', error);
       
-      // Fallback - génération basique
+      // Fallback amélioré - génération basique
       const { nom, categorie, prix } = productData;
-      return `${nom} - Un excellent produit de la catégorie ${categorie}. Prix attractif à ${prix}. Contactez-nous pour plus de détails sur les caractéristiques et la disponibilité.`;
+      return `${nom} - Un excellent produit de la catégorie ${categorie}. ${prix ? `Prix attractif à ${prix}€.` : ''} Découvrez ses caractéristiques exceptionnelles et sa qualité premium. Contactez-nous pour plus de détails sur la disponibilité.`;
     }
   }
 }
@@ -1294,9 +1301,12 @@ function CategoriesScreen({ categories, produits, selectedCategory, setSelectedC
                   className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
                 >
                   <img
-                    src={produit.images[0]}
+                    src={produit.image || produit.images?.[0] || 'https://via.placeholder.com/300x200?text=Produit'}
                     alt={produit.nom}
                     className="w-full h-32 object-cover rounded-t-lg"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/300x200?text=Produit';
+                    }}
                   />
                   <div className="p-3">
                     <h3 className="font-bold text-sm mb-1 line-clamp-2">{produit.nom}</h3>
@@ -2120,8 +2130,15 @@ function DetailProduit({ produit, onBack }) {
 
       {/* Galerie */}
       <div className="relative">
-        <img src={produit.images[currentImg]} alt={produit.nom} className="w-full h-64 object-cover"/>
-        {produit.images.length > 1 && (
+        <img 
+          src={(produit.images && produit.images[currentImg]) || produit.image || 'https://via.placeholder.com/300x200?text=Produit'} 
+          alt={produit.nom} 
+          className="w-full h-64 object-cover"
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/300x200?text=Produit';
+          }}
+        />
+        {produit.images && produit.images.length > 1 && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
             {produit.images.map((_, idx) => (
               <button
@@ -2765,7 +2782,14 @@ function AdminProduits({ produits, setProduits, categories }) {
               {produits.map(p => (
                 <tr key={p.id} className="border-b hover:bg-gray-50">
                   <td className="p-2 flex items-center">
-                    <img src={p.images[0]} alt={p.nom} className="w-10 h-10 object-cover rounded mr-2"/>
+                    <img 
+                      src={p.image || p.images?.[0] || 'https://via.placeholder.com/40x40?text=P'} 
+                      alt={p.nom} 
+                      className="w-10 h-10 object-cover rounded mr-2"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/40x40?text=P';
+                      }}
+                    />
                     <span className="font-medium">{p.nom}</span>
                   </td>
                   <td className="p-2">${p.prix}</td>

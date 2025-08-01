@@ -170,15 +170,65 @@ app.post('/api/upload/single', upload.single('image'), (req, res) => {
 
 // Routes OpenAI simulées
 app.post('/api/openai/generate-description', (req, res) => {
-  const { nom, categorie } = req.body;
-  console.log('🔄 Génération description IA simulée pour:', { nom, categorie });
+  const { nom, categorie, prix } = req.body;
+  console.log('🔄 Génération description IA simulée pour:', { nom, categorie, prix });
   
-  const description = `${nom} est un excellent produit de la catégorie ${categorie}. Conçu avec des matériaux de qualité premium, ce produit offre des performances exceptionnelles et une durabilité remarquable. Idéal pour les utilisateurs exigeants qui recherchent la qualité et l'innovation. Disponible chez Mireb Commercial, votre partenaire de confiance en RDC.`;
+  if (!nom || !categorie) {
+    return res.status(400).json({
+      success: false,
+      error: 'Nom et catégorie requis pour générer une description'
+    });
+  }
+  
+  // Descriptions variées par catégorie
+  const templates = {
+    'electronique': [
+      `${nom} - Technologie de pointe pour un usage quotidien. Design élégant et performances exceptionnelles qui révolutionnent votre expérience utilisateur.`,
+      `Découvrez ${nom}, l'innovation électronique qui combine style et fonctionnalité. Qualité premium garantie pour les utilisateurs exigeants.`,
+      `${nom} redéfinit les standards. Interface intuitive, durabilité remarquable et performance optimale pour tous vos besoins.`
+    ],
+    'mode': [
+      `${nom} - Style intemporel et confort absolu. Pour un look parfait en toute occasion, alliant élégance et praticité.`,
+      `Adoptez ${nom} et exprimez votre personnalité unique. Mode contemporaine et qualité supérieure pour un style irrésistible.`,
+      `${nom} combine tendance et authenticité. Matériaux nobles et finitions soignées pour un style qui vous ressemble.`
+    ],
+    'maison': [
+      `${nom} - Transformez votre intérieur avec ce produit exceptionnel. Praticité et esthétique réunies pour votre bien-être quotidien.`,
+      `${nom} apporte confort et fonctionnalité à votre maison. Design moderne et durabilité assurée pour un foyer harmonieux.`,
+      `Découvrez ${nom}, l'alliance parfaite entre utilité et beauté. Innovation et style pour embellir votre espace de vie.`
+    ],
+    'sport': [
+      `${nom} - Dépassez vos limites avec cet équipement de qualité professionnelle. Performance et résistance pour atteindre vos objectifs.`,
+      `${nom} vous accompagne dans tous vos défis sportifs. Conception ergonomique et matériaux techniques pour l'excellence.`,
+      `Atteignez de nouveaux sommets avec ${nom}. Conçu pour les athlètes exigeants qui ne font aucun compromis sur la qualité.`
+    ],
+    'beaute': [
+      `${nom} - Révélez votre beauté naturelle avec ce produit d'exception. Formule innovante pour des résultats visibles et durables.`,
+      `${nom} sublime votre routine beauté. Ingrédients sélectionnés et efficacité prouvée pour une peau éclatante.`,
+      `Découvrez ${nom}, votre allié beauté au quotidien. Texture agréable et bienfaits incomparables pour vous sentir rayonnante.`
+    ]
+  };
+  
+  const categoryKey = categorie.toLowerCase();
+  const categoryTemplates = templates[categoryKey] || templates['electronique'];
+  const randomTemplate = categoryTemplates[Math.floor(Math.random() * categoryTemplates.length)];
+  
+  // Ajout d'informations sur le prix
+  let description = randomTemplate;
+  if (prix && prix > 0) {
+    description += ` Disponible à un prix exceptionnel de ${prix}€. Qualité garantie et satisfaction assurée.`;
+  } else {
+    description += ` Contactez-nous pour connaître notre tarif préférentiel et nos offres spéciales.`;
+  }
+  
+  // Ajout d'informations Mireb
+  description += ` Disponible chez Mireb Commercial, votre partenaire de confiance en RDC.`;
   
   res.json({
     success: true,
     message: 'Description générée avec succès',
-    data: { description }
+    data: { description },
+    generated_at: new Date().toISOString()
   });
 });
 
