@@ -2,7 +2,7 @@
   "name": "mireb-crm",
   "version": "1.0.0",
   "description": "CRM Mireb avec interface admin complète",
-  "main": "api/vercel.js",
+  "main": "backend/server-unified.js",
   "type": "module",
   "scripts": {
     "start": "node backend/server-unified.js",

@@ -2,11 +2,11 @@
   "name": "mireb-crm-backend",
   "version": "1.0.0",
   "description": "Backend pour Mireb Commercial CRM avec MongoDB et APIs REST",
-  "main": "server.js",
+  "main": "server-unified.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node server-unified.js",
+    "dev": "nodemon server-unified.js",
     "test": "jest",
     "build": "node build.js"
   },
