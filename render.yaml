@@ -6,7 +6,9 @@ services:
     branch: main
     rootDir: .
     buildCommand: "npm install"
-    startCommand: "npm start"
+    startCommand: "./start.sh"
     envVars:
       - key: NODE_VERSION
         value: "18.17.1"
+      - key: NODE_ENV
+        value: "production"
