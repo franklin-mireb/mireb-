@@ -1,7 +1,7 @@
 # 🏪 Mireb CRM - Système de Gestion Commerciale
 
-[![Deploy Status](https://img.shields.io/badge/Deploy-GitHub%20Pages-brightgreen)](https://franklin-mireb.github.io/mireb-crm/)
-[![Version](https://img.shields.io/badge/Version-2.0.0-blue)](https://github.com/franklin-mireb/mireb-crm)
+[![Deploy Status](https://img.shields.io/badge/Deploy-GitHub%20Pages-brightgreen)](https://franklin-mireb.github.io/b2b/)
+[![Version](https://img.shields.io/badge/Version-2.0.0-blue)](https://github.com/franklin-mireb/b2b)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ## 🎯 À Propos
@@ -10,7 +10,7 @@ Mireb CRM est un système de gestion commerciale moderne avec authentification s
 
 ## 🚀 Démo en Ligne
 
-**🌐 [Accéder à la Demo](https://franklin-mireb.github.io/mireb-crm/)**
+**🌐 [Accéder à la Demo](https://franklin-mireb.github.io/b2b/)**
 
 ### 🔑 Identifiants de Test
 - **Email** : `mirebshop@gmail.com`
@@ -62,8 +62,8 @@ CLOUDINARY_API_SECRET=...
 ### 1. Préparation
 ```bash
 # Cloner le repository
-git clone https://github.com/franklin-mireb/mireb-
-cd mireb-
+git clone https://github.com/franklin-mireb/b2b.git
+cd b2b
 
 # Installer les dépendances
 npm install
