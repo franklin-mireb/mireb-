@@ -5,7 +5,7 @@
   "main": "api/vercel.js",
   "type": "module",
   "scripts": {
-    "start": "node server-local.cjs",
+    "start": "node backend/server-unified.js",
     "dev": "node server-local.cjs",
     "build": "mkdir -p public && cp *.html public/ && cp -r api public/",
     "vercel-build": "mkdir -p public && cp *.html public/ && cp -r api public/ && echo 'Vercel build complete'"
