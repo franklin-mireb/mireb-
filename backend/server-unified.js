@@ -4,11 +4,20 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
 
 // Routes simplifiées
 import produitsRoutes from './routes/produits.js';
 
 dotenv.config();
+
+// Configuration Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,39 +142,117 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
-// Routes upload - Support multipart ET JSON
-app.post('/api/upload/single', upload.single('image'), (req, res) => {
-  console.log('🔄 Upload image simulé');
+// Routes upload - Support multipart ET JSON avec Cloudinary
+app.post('/api/upload/single', upload.single('image'), async (req, res) => {
+  console.log('🔄 Upload image vers Cloudinary');
   
-  let fileName = 'image-simulee.jpg';
-  let fileSize = Math.floor(Math.random() * 500000) + 100000;
-  
-  // Si fichier multipart présent
-  if (req.file) {
-    fileName = req.file.originalname;
-    fileSize = req.file.size;
-    console.log('📁 Fichier reçu:', { name: fileName, size: fileSize });
-  }
-  // Si données JSON présentes
-  else if (req.body.fileName) {
-    fileName = req.body.fileName;
-    fileSize = req.body.fileSize || fileSize;
-    console.log('📄 Données JSON reçues:', req.body);
-  }
-  
-  const fakeImageUrl = `https://picsum.photos/400/300?random=${Date.now()}`;
-  
-  res.json({
-    success: true,
-    message: 'Image uploadée avec succès (mode simulation)',
-    data: {
-      url: fakeImageUrl,
-      originalName: fileName,
-      size: fileSize,
-      mimetype: 'image/jpeg',
-      publicId: `mireb_${Date.now()}`
+  try {
+    let uploadResult;
+    
+    // Si fichier multipart présent
+    if (req.file) {
+      console.log('📁 Fichier reçu:', { name: req.file.originalname, size: req.file.size });
+      
+      // Upload vers Cloudinary
+      uploadResult = await cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'mireb-products',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) {
+            console.error('❌ Erreur Cloudinary:', error);
+            throw error;
+          }
+          return result;
+        }
+      );
+      
+      // Stream le buffer vers Cloudinary
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'mireb-products',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' },
+            { quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) {
+            console.error('❌ Erreur Cloudinary:', error);
+            return res.status(500).json({
+              success: false,
+              message: 'Erreur lors de l\'upload vers Cloudinary',
+              error: error.message
+            });
+          }
+          
+          console.log('✅ Image uploadée vers Cloudinary:', result.secure_url);
+          
+          res.json({
+            success: true,
+            message: 'Image uploadée avec succès vers Cloudinary',
+            data: {
+              url: result.secure_url,
+              public_id: result.public_id,
+              fileName: req.file.originalname,
+              fileSize: req.file.size,
+              cloudinary_id: result.public_id
+            }
+          });
+        }
+      );
+      
+      stream.end(req.file.buffer);
+      return;
     }
-  });
+    
+    // Si données JSON présentes (fallback avec image par défaut)
+    else if (req.body.fileName) {
+      console.log('📄 Données JSON reçues, utilisation image par défaut');
+      const defaultImageUrl = `https://via.placeholder.com/400x300/orange/white?text=${encodeURIComponent(req.body.fileName || 'Produit')}`;
+      
+      res.json({
+        success: true,
+        message: 'Image par défaut générée',
+        data: {
+          url: defaultImageUrl,
+          fileName: req.body.fileName,
+          fileSize: req.body.fileSize || 100000,
+          mimetype: 'image/jpeg',
+          cloudinary_id: `default_${Date.now()}`
+        }
+      });
+    }
+    
+    // Aucun fichier fourni
+    else {
+      const defaultUrl = 'https://via.placeholder.com/400x300/orange/white?text=Produit';
+      res.json({
+        success: true,
+        message: 'Aucun fichier, image par défaut utilisée',
+        data: {
+          url: defaultUrl,
+          fileName: 'default.jpg',
+          fileSize: 0,
+          cloudinary_id: `default_${Date.now()}`
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur upload:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'upload',
+      error: error.message
+    });
+  }
 });
 
 // Routes OpenAI simulées
@@ -310,6 +397,82 @@ app.get('/api/analytics/dashboard', (req, res) => {
   };
   
   res.json(analyticsData);
+});
+
+// Routes Leads - Gestion des prospects
+app.get('/api/leads', (req, res) => {
+  console.log('🔄 Récupération des leads');
+  
+  // Lecture des leads depuis db.json
+  try {
+    const dbPath = path.join(__dirname, '..', 'db.json');
+    
+    if (fs.existsSync(dbPath)) {
+      const data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      res.json({
+        success: true,
+        data: data.leads || [],
+        count: (data.leads || []).length
+      });
+    } else {
+      res.json({
+        success: true,
+        data: [],
+        count: 0
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erreur lecture leads:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la lecture des leads'
+    });
+  }
+});
+
+app.post('/api/leads', (req, res) => {
+  console.log('🔄 Ajout nouveau lead:', req.body);
+  
+  try {
+    const dbPath = path.join(__dirname, '..', 'db.json');
+    
+    // Lire les données existantes
+    let data = { leads: [], produits: [] };
+    if (fs.existsSync(dbPath)) {
+      data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+    }
+    
+    // Créer le nouveau lead
+    const newLead = {
+      id: Date.now().toString(),
+      ...req.body,
+      createdAt: new Date().toISOString(),
+      statut: 'nouveau',
+      source: 'website'
+    };
+    
+    // Ajouter à la liste
+    if (!data.leads) data.leads = [];
+    data.leads.push(newLead);
+    
+    // Sauvegarder
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+    
+    console.log('✅ Lead ajouté avec succès:', newLead.id);
+    
+    res.json({
+      success: true,
+      message: 'Lead ajouté avec succès',
+      data: newLead
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur ajout lead:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'ajout du lead'
+    });
+  }
 });
 
 // Routes frontend - servir les pages HTML
