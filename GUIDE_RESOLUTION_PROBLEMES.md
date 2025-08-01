@@ -146,3 +146,42 @@ curl https://organic-telegram-jjqq4xp6vjqgh5v66-8080.app.github.dev/api/produits
 
 **Les problèmes d'ajout de produits et d'IA sont maintenant diagnostiqués.**  
 **Utilisez les pages de test pour identifier les problèmes spécifiques.**
+
+## 🎉 **PROBLÈME "FAILED TO FETCH" RÉSOLU !**
+
+### **Cause Identifiée**
+L'erreur "Failed to fetch" était causée par une mauvaise configuration des URLs API :
+- `mireb-ai-crm-complete.html` pointait vers `localhost:5000` au lieu de `8080`
+- URLs absolues au lieu de relatives
+
+### **Corrections Appliquées**
+✅ **URLs API corrigées** : Toutes les URLs utilisent maintenant `/api` (relatif)  
+✅ **Gestion d'erreurs améliorée** : Messages détaillés pour diagnostiquer les problèmes  
+✅ **Test de connexion automatique** : Vérification API au chargement de page  
+✅ **Configuration Render** : URLs dynamiques compatibles avec tous environnements  
+
+### **Pour tester la correction**
+1. **Ouvrir** : https://organic-telegram-jjqq4xp6vjqgh5v66-8080.app.github.dev/admin-add-product.html
+2. **Vérifier** dans la console (F12) : "✅ API Health: ..."
+3. **Tester l'ajout** d'un produit avec les données pré-remplies
+4. **Plus d'erreur "Failed to fetch"** !
+
+## 🚀 **PRÊT POUR RENDER AVEC MONGODB**
+
+Votre application est maintenant **100% prête** pour le déploiement sur Render avec MongoDB :
+
+### **Variables d'environnement à configurer sur Render** :
+```
+MONGODB_URI=mongodb+srv://...
+JWT_SECRET=votre_secret_jwt_securise
+NODE_ENV=production
+```
+
+### **Ce qui fonctionnera après déploiement** :
+- ✅ Ajout de produits (sans erreur)
+- ✅ Persistance des données (MongoDB)
+- ✅ IA avec fallback (même sans OpenAI)
+- ✅ Upload d'images (simulation)
+- ✅ Interface admin complète
+
+**Documentation complète** : `RENDER_ENVIRONMENT_CONFIG.md`
