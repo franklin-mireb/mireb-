@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ajout Produit - Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold mb-6 text-gray-800">
+                <i class="fas fa-plus-circle text-green-500 mr-2"></i>
+                Test Rapide - Ajout Produit
+            </h1>
+            
+            <!-- Formulaire simplifié -->
+            <form id="testForm" class="space-y-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom du produit *</label>
+                        <input type="text" id="nom" name="nom" required
+                               value="Produit Test Rapide"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie *</label>
+                        <select id="categorie" name="categorie" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="Test">Test</option>
+                            <option value="Électronique">Électronique</option>
+                            <option value="Vêtements">Vêtements</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Prix *</label>
+                        <input type="number" id="prix" name="prix" required
+                               value="25"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stock *</label>
+                        <input type="number" id="stock" name="stock" required
+                               value="10"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                        <input type="text" id="ville" name="ville"
+                               value="Kinshasa"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                    <textarea id="description" name="description" required rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">Ceci est un produit de test pour vérifier le fonctionnement de l'ajout de produits dans Mireb CRM.</textarea>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="submit" 
+                            class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>
+                        Ajouter le Produit
+                    </button>
+                    
+                    <button type="button" id="testAI"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-robot mr-2"></i>
+                        Test IA Description
+                    </button>
+                    
+                    <button type="button" id="resetForm"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-undo mr-2"></i>
+                        Reset
+                    </button>
+                </div>
+            </form>
+
+            <!-- Résultats -->
+            <div id="results" class="space-y-4">
+                <!-- Les résultats apparaîtront ici -->
+            </div>
+        </div>
+
+        <!-- Log de debug -->
+        <div class="bg-gray-900 text-green-400 rounded-lg shadow-lg p-6 mt-6">
+            <h2 class="text-lg font-bold mb-4">
+                <i class="fas fa-terminal mr-2"></i>
+                Log de Debug
+            </h2>
+            <div id="debugLog" class="font-mono text-sm whitespace-pre-wrap max-h-96 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let logCounter = 0;
+
+        function log(message, type = 'info') {
+            logCounter++;
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : '📝';
+            const logDiv = document.getElementById('debugLog');
+            logDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function showResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const alertClass = type === 'success' ? 'bg-green-50 border-green-500 text-green-700' :
+                              type === 'error' ? 'bg-red-50 border-red-500 text-red-700' :
+                              'bg-blue-50 border-blue-500 text-blue-700';
+            
+            const icon = type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-times-circle' :
+                        'fa-info-circle';
+
+            resultsDiv.innerHTML = `
+                <div class="border-l-4 p-4 ${alertClass}">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p>${message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Test de base au chargement
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('🚀 Initialisation du test...');
+            
+            // Test API Health
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                log(`✅ API Health: ${data.message}`, 'success');
+            } catch (error) {
+                log(`❌ Erreur API Health: ${error.message}`, 'error');
+            }
+        });
+
+        // Soumission du formulaire
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            log('📤 Début de l\'ajout de produit...');
+
+            const formData = new FormData(e.target);
+            const productData = {
+                nom: formData.get('nom'),
+                categorie: formData.get('categorie'),
+                prix: parseFloat(formData.get('prix')),
+                stock: parseInt(formData.get('stock')),
+                ville: formData.get('ville'),
+                description: formData.get('description'),
+                tags: ['test', 'rapide'],
+                caracteristiques: []
+            };
+
+            log(`📋 Données à envoyer: ${JSON.stringify(productData, null, 2)}`);
+
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                log(`📡 Réponse HTTP: ${response.status} ${response.statusText}`);
+
+                const result = await response.json();
+                log(`📥 Réponse reçue: ${JSON.stringify(result, null, 2)}`);
+
+                if (result.success) {
+                    showResult(`✅ Produit créé avec succès ! ID: ${result.data.id}`, 'success');
+                    log(`🎉 Succès! Produit ID: ${result.data.id}`, 'success');
+                } else {
+                    showResult(`❌ Erreur: ${result.message}`, 'error');
+                    log(`❌ Échec: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Erreur de connexion: ${error.message}`, 'error');
+                log(`💥 Exception: ${error.message}`, 'error');
+                log(`🔍 Stack: ${error.stack}`);
+            }
+        });
+
+        // Test IA
+        document.getElementById('testAI').addEventListener('click', async () => {
+            log('🤖 Test de génération IA...');
+            
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+
+            if (!nom || !categorie) {
+                showResult('Veuillez remplir nom et catégorie', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/openai/generate-description`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nom, categorie })
+                });
+
+                log(`🤖 Réponse IA: ${response.status}`);
+
+                const result = await response.json();
+                log(`🤖 Résultat IA: ${JSON.stringify(result, null, 2)}`);
+
+                if (result.success) {
+                    document.getElementById('description').value = result.data.description;
+                    showResult('✅ Description générée par IA!', 'success');
+                    log('🎨 Description IA appliquée', 'success');
+                } else {
+                    // Utiliser le fallback
+                    if (result.fallback) {
+                        document.getElementById('description').value = result.fallback.description;
+                        showResult('⚠️ IA indisponible - Description générée localement', 'info');
+                        log('🔄 Fallback utilisé', 'info');
+                    } else {
+                        showResult(`❌ Erreur IA: ${result.message}`, 'error');
+                        log(`🤖 Erreur IA: ${result.message}`, 'error');
+                    }
+                }
+            } catch (error) {
+                showResult(`❌ Erreur IA: ${error.message}`, 'error');
+                log(`🤖 Exception IA: ${error.message}`, 'error');
+            }
+        });
+
+        // Reset formulaire
+        document.getElementById('resetForm').addEventListener('click', () => {
+            document.getElementById('testForm').reset();
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('debugLog').textContent = '';
+            logCounter = 0;
+            log('🔄 Formulaire remis à zéro');
+        });
+    </script>
+</body>
+</html>

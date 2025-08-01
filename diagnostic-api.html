@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold mb-6 text-gray-800">
+                <i class="fas fa-cogs text-orange-500 mr-2"></i>
+                Diagnostic Mireb CRM
+            </h1>
+            
+            <div id="diagnosticResults" class="space-y-4">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-2xl text-orange-500"></i>
+                    <p class="mt-2">Diagnostic en cours...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        async function runDiagnostic() {
+            const results = [];
+            
+            try {
+                // Test 1: API Health
+                console.log('🔍 Test 1: API Health...');
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                const healthData = await healthResponse.json();
+                results.push({
+                    test: 'API Health',
+                    status: healthResponse.ok ? 'success' : 'error',
+                    message: healthResponse.ok ? 'API accessible' : 'API non accessible',
+                    details: healthData
+                });
+            } catch (error) {
+                results.push({
+                    test: 'API Health',
+                    status: 'error',
+                    message: 'Erreur de connexion API',
+                    details: error.message
+                });
+            }
+
+            try {
+                // Test 2: Get Products
+                console.log('🔍 Test 2: Get Products...');
+                const produitsResponse = await fetch(`${API_BASE}/produits`);
+                const produitsData = await produitsResponse.json();
+                results.push({
+                    test: 'Récupération Produits',
+                    status: produitsResponse.ok ? 'success' : 'error',
+                    message: produitsResponse.ok ? `${produitsData.data?.length || 0} produits trouvés` : 'Erreur récupération',
+                    details: produitsData
+                });
+            } catch (error) {
+                results.push({
+                    test: 'Récupération Produits',
+                    status: 'error',
+                    message: 'Erreur de connexion',
+                    details: error.message
+                });
+            }
+
+            try {
+                // Test 3: Add Product
+                console.log('🔍 Test 3: Add Product...');
+                const testProduct = {
+                    nom: "Produit Test Diagnostic",
+                    description: "Test automatique",
+                    prix: 50,
+                    categorie: "Test",
+                    stock: 5,
+                    ville: "Kinshasa",
+                    tags: ["diagnostic", "test"]
+                };
+                
+                const addResponse = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testProduct)
+                });
+                const addData = await addResponse.json();
+                results.push({
+                    test: 'Ajout Produit',
+                    status: addResponse.ok ? 'success' : 'error',
+                    message: addResponse.ok ? 'Produit créé avec succès' : 'Erreur création',
+                    details: addData
+                });
+            } catch (error) {
+                results.push({
+                    test: 'Ajout Produit',
+                    status: 'error',
+                    message: 'Erreur de création',
+                    details: error.message
+                });
+            }
+
+            // Test 4: Local Storage
+            console.log('🔍 Test 4: Local Storage...');
+            try {
+                localStorage.setItem('test', 'value');
+                localStorage.removeItem('test');
+                results.push({
+                    test: 'Local Storage',
+                    status: 'success',
+                    message: 'Local Storage disponible',
+                    details: 'Fonctionnel'
+                });
+            } catch (error) {
+                results.push({
+                    test: 'Local Storage',
+                    status: 'error',
+                    message: 'Local Storage non disponible',
+                    details: error.message
+                });
+            }
+
+            // Test 5: Console Errors
+            const errors = [];
+            const originalError = console.error;
+            console.error = function(...args) {
+                errors.push(args.join(' '));
+                originalError.apply(console, args);
+            };
+
+            results.push({
+                test: 'Erreurs Console',
+                status: errors.length === 0 ? 'success' : 'warning',
+                message: errors.length === 0 ? 'Aucune erreur détectée' : `${errors.length} erreur(s) détectée(s)`,
+                details: errors
+            });
+
+            displayResults(results);
+        }
+
+        function displayResults(results) {
+            const container = document.getElementById('diagnosticResults');
+            container.innerHTML = '';
+
+            results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-lg border-l-4 ${
+                    result.status === 'success' ? 'bg-green-50 border-green-500' :
+                    result.status === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+                    'bg-red-50 border-red-500'
+                }`;
+
+                const icon = result.status === 'success' ? 'fa-check-circle text-green-500' :
+                           result.status === 'warning' ? 'fa-exclamation-triangle text-yellow-500' :
+                           'fa-times-circle text-red-500';
+
+                div.innerHTML = `
+                    <div class="flex items-start">
+                        <i class="fas ${icon} mt-1 mr-3"></i>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800">${result.test}</h3>
+                            <p class="text-gray-600 mt-1">${result.message}</p>
+                            ${result.details ? `
+                                <details class="mt-2">
+                                    <summary class="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                                        Voir les détails
+                                    </summary>
+                                    <pre class="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">${JSON.stringify(result.details, null, 2)}</pre>
+                                </details>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(div);
+            });
+
+            // Bouton pour refaire le test
+            const retestButton = document.createElement('div');
+            retestButton.className = 'mt-6 text-center';
+            retestButton.innerHTML = `
+                <button onclick="runDiagnostic()" class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i>
+                    Refaire le diagnostic
+                </button>
+            `;
+            container.appendChild(retestButton);
+        }
+
+        // Lancer le diagnostic au chargement
+        document.addEventListener('DOMContentLoaded', runDiagnostic);
+    </script>
+</body>
+</html>

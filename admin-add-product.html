@@ -297,14 +297,30 @@
     <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
 
     <script>
-        // Configuration API
-        const API_BASE = '/api';
+        // Configuration API adaptée à tous les environnements
+        const API_BASE = window.location.origin.includes('localhost') ? '/api' : '/api';
         
         // Variables globales
         let uploadedImages = [];
         let currentUser = null;
         
         console.log('🔗 API Base URL:', API_BASE);
+        console.log('🌍 Current Origin:', window.location.origin);
+        
+        // Fonction pour tester la connexion API
+        async function testApiConnection() {
+            try {
+                console.log('🧪 Test de connexion API...');
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                console.log('✅ API Health:', data);
+                return true;
+            } catch (error) {
+                console.error('❌ Erreur connexion API:', error);
+                showToast('⚠️ Problème de connexion API. Vérifiez que le serveur est démarré.', 'error', 10000);
+                return false;
+            }
+        }
 
         // ==========================================
         // AUTHENTIFICATION
@@ -727,11 +743,44 @@
                         showToast('Formulaire réinitialisé pour un nouveau produit', 'info');
                     }, 3000);
                 } else {
-                    throw new Error(result.message);
+                    throw new Error(result.message || 'Erreur serveur inconnue');
                 }
             } catch (error) {
                 console.error('Erreur création:', error);
-                showToast('Erreur lors de la création: ' + error.message, 'error');
+                
+                // Gestion spécifique des erreurs de connexion
+                let errorMessage = 'Erreur lors de la création du produit';
+                
+                if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                    errorMessage = `
+                        🔌 Problème de connexion avec le serveur.
+                        
+                        Vérifications:
+                        • Le serveur est-il démarré?
+                        • L'URL API est-elle correcte? (${API_BASE})
+                        • Y a-t-il un problème de réseau?
+                        
+                        Pour Render: Vérifiez que les variables d'environnement sont configurées.
+                    `;
+                } else if (error.message.includes('401') || error.message.includes('unauthorized')) {
+                    errorMessage = '🔐 Problème d\'authentification. Reconnectez-vous.';
+                } else if (error.message.includes('400')) {
+                    errorMessage = '📋 Données du formulaire invalides. Vérifiez tous les champs.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = '⚙️ Erreur serveur interne. Contactez l\'administrateur.';
+                } else {
+                    errorMessage = `❌ ${error.message}`;
+                }
+                
+                showToast(errorMessage, 'error', 15000);
+                
+                // Log détaillé pour le debug
+                console.log('🔍 Debug Info:', {
+                    apiBase: API_BASE,
+                    origin: window.location.origin,
+                    error: error.message,
+                    stack: error.stack
+                });
             } finally {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
@@ -772,6 +821,25 @@
             
             showToast('🔐 Interface authentifiée chargée avec succès!', 'success');
             console.log('🚀 Interface admin réelle chargée pour:', currentUser.name);
+        });
+        
+        // ==========================================
+        // INITIALISATION AU CHARGEMENT
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Initialisation de l\'interface d\'ajout de produits...');
+            
+            // Test de connexion API
+            const apiStatus = await testApiConnection();
+            if (!apiStatus) {
+                const retryButton = document.createElement('button');
+                retryButton.className = 'fixed bottom-4 left-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg z-50';
+                retryButton.innerHTML = '<i class="fas fa-redo mr-2"></i>Retry API';
+                retryButton.onclick = () => window.location.reload();
+                document.body.appendChild(retryButton);
+            }
+            
+            console.log('✅ Initialisation terminée');
         });
     </script>
 </body>

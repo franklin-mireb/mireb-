@@ -55,7 +55,7 @@ const { useState, useEffect, useRef } = React;
    1. CONFIGURATION API & BACKEND
    ========================================================= */
 const BACKEND_CONFIG = {
-  baseURL: "http://localhost:5000/api", // URL du backend Express
+  baseURL: "/api", // URL relative pour fonctionner sur tous les environnements
   timeout: 10000,
   retries: 3
 };
@@ -70,7 +70,7 @@ const AUTH_CONFIG = {
 
 // Configuration WebSocket pour chat temps réel
 const WEBSOCKET_CONFIG = {
-  url: "http://localhost:5000",
+  url: window.location.origin, // URL dynamique basée sur l'origine
   reconnectInterval: 3000,
   maxReconnectAttempts: 5
 };
