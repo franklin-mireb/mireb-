@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin DEMO - Ajouter Produit | Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .file-upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .file-upload-area:hover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .file-upload-area.dragover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .demo-banner {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Bannière mode démo -->
+    <div class="demo-banner">
+        <i class="fas fa-flask mr-2"></i>
+        MODE DÉMONSTRATION - Toutes les données sont temporaires
+        <i class="fas fa-flask ml-2"></i>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    <i class="fas fa-plus-circle text-orange-500 mr-3"></i>
+                    Ajouter un nouveau produit (DEMO)
+                </h1>
+                <p class="text-gray-600 mt-2">Testez l'interface d'ajout avec des données temporaires</p>
+            </div>
+
+            <!-- Statut de connexion -->
+            <div id="connectionStatus" class="mb-6 p-4 rounded-lg bg-blue-100 border border-blue-300">
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                    <span class="text-blue-800">Vérification de la connexion backend...</span>
+                </div>
+            </div>
+
+            <!-- Formulaire principal -->
+            <form id="productForm" class="bg-white rounded-lg shadow-lg p-6 space-y-6">
+                <!-- Informations de base -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom du produit <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="nom" name="nom" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Ex: Smartphone Samsung Galaxy A24">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Catégorie <span class="text-red-500">*</span>
+                        </label>
+                        <select id="categorie" name="categorie" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="">Sélectionner une catégorie</option>
+                            <option value="Électronique">Électronique</option>
+                            <option value="Mode">Mode</option>
+                            <option value="Maison & Jardin">Maison & Jardin</option>
+                            <option value="Automobile">Automobile</option>
+                            <option value="Santé & Beauté">Santé & Beauté</option>
+                            <option value="Sports & Loisirs">Sports & Loisirs</option>
+                            <option value="Industrie & BTP">Industrie & BTP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Prix et stock -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Prix <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="prix" name="prix" required min="0" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <span class="absolute right-3 top-2 text-gray-500">USD</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="stock" name="stock" required min="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock minimum
+                        </label>
+                        <input type="number" id="stockMinimum" name="stockMinimum" min="0" value="5"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <!-- Upload d'images -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Images du produit (SIMULATION)
+                    </label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" id="imageFiles" name="images" multiple accept="image/*" class="hidden">
+                        <div id="uploadContent">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-700">Glissez vos images ici</p>
+                            <p class="text-sm text-gray-500">ou cliquez pour sélectionner</p>
+                            <p class="text-xs text-gray-400 mt-2">Mode démo: Images générées automatiquement</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Prévisualisation des images -->
+                    <div id="imagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 hidden"></div>
+                </div>
+
+                <!-- Description avec IA -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Description <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="generateDescription" 
+                            class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            <i class="fas fa-magic mr-2"></i>Générer avec IA (DEMO)
+                        </button>
+                    </div>
+                    <textarea id="description" name="description" required rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Description détaillée du produit..."></textarea>
+                </div>
+
+                <!-- Tags (générés par IA) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Tags SEO
+                        </label>
+                        <button type="button" id="generateTags" 
+                            class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            <i class="fas fa-tags mr-2"></i>Optimiser avec IA (DEMO)
+                        </button>
+                    </div>
+                    <input type="text" id="tags" name="tags"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="tag1, tag2, tag3...">
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <button type="button" onclick="window.history.back()" 
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                        Annuler
+                    </button>
+                    <button type="submit" id="submitBtn"
+                        class="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50">
+                        <i class="fas fa-save mr-2"></i>Créer le produit (DEMO)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
+
+    <script>
+        // Mode démo : toutes les fonctionnalités simulées
+        let uploadedImages = [];
+
+        // Simulation des appels API
+        function simulateAPICall(endpoint, options = {}) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    if (endpoint.includes('upload')) {
+                        resolve({
+                            success: true,
+                            data: {
+                                url: `https://picsum.photos/400/300?random=${Date.now()}`,
+                                originalName: 'demo-image.jpg',
+                                size: 123456
+                            }
+                        });
+                    } else if (endpoint.includes('generate-description')) {
+                        const formData = new FormData(document.getElementById('productForm'));
+                        const nom = formData.get('nom');
+                        const categorie = formData.get('categorie');
+                        resolve({
+                            success: true,
+                            data: {
+                                description: `${nom || 'Ce produit'} est un excellent choix de la catégorie ${categorie || 'premium'}. Il offre une qualité exceptionnelle et répond parfaitement aux besoins des clients congolais. Conçu pour une utilisation durable, ce produit combine innovation et praticité pour satisfaire vos attentes.`
+                            }
+                        });
+                    } else if (endpoint.includes('optimize-tags')) {
+                        const formData = new FormData(document.getElementById('productForm'));
+                        const categorie = formData.get('categorie');
+                        resolve({
+                            success: true,
+                            data: {
+                                tags: ['congo', 'kinshasa', 'mireb', 'qualité', categorie?.toLowerCase() || 'premium', 'durable', 'fiable']
+                            }
+                        });
+                    } else if (endpoint.includes('produits') && options.method === 'POST') {
+                        resolve({
+                            success: true,
+                            message: 'Produit créé avec succès en mode démo !',
+                            data: { id: Date.now(), ...JSON.parse(options.body || '{}') }
+                        });
+                    }
+                }, Math.random() * 1000 + 500); // Simuler une latence réseau réaliste
+            });
+        }
+
+        // Mise à jour du statut de connexion
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-flask text-orange-500 mr-2"></i>
+                    <span class="text-orange-800">Mode démo activé - Simulation complète de l'interface</span>
+                </div>
+            `;
+            statusDiv.className = 'mb-6 p-4 rounded-lg bg-orange-100 border border-orange-300';
+        }
+
+        // Configuration du drag & drop
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const imageFiles = document.getElementById('imageFiles');
+        const imagePreview = document.getElementById('imagePreview');
+
+        fileUploadArea.addEventListener('click', () => imageFiles.click());
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        imageFiles.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // Gestion des fichiers uploadés (simulation)
+        async function handleFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    await uploadImage(file);
+                }
+            }
+        }
+
+        // Upload d'une image (simulation)
+        async function uploadImage(file) {
+            try {
+                showToast('Upload en cours... (simulation)', 'info');
+                const result = await simulateAPICall('/upload/single');
+                
+                if (result.success) {
+                    uploadedImages.push(result.data);
+                    updateImagePreview();
+                    showToast('Image uploadée avec succès! (démo)', 'success');
+                } else {
+                    showToast('Erreur upload: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showToast('Erreur upload: ' + error.message, 'error');
+            }
+        }
+
+        // Mise à jour de la prévisualisation
+        function updateImagePreview() {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            if (uploadedImages.length > 0) {
+                preview.classList.remove('hidden');
+                uploadedImages.forEach((img, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <img src="${img.url}" alt="${img.originalName}" class="image-preview">
+                        <button type="button" onclick="removeImage(${index})"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600">
+                            ×
+                        </button>
+                        ${index === 0 ? '<span class="absolute bottom-0 left-0 bg-orange-500 text-white text-xs px-2 py-1 rounded-tr">Principal</span>' : ''}
+                    `;
+                    preview.appendChild(div);
+                });
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        // Supprimer une image
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            updateImagePreview();
+        }
+
+        // Génération de description avec IA (simulation)
+        document.getElementById('generateDescription').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            
+            if (!nom || !categorie) {
+                showToast('Veuillez remplir le nom et la catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateDescription');
+            btn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Génération... (DEMO)';
+            btn.disabled = true;
+
+            try {
+                const result = await simulateAPICall('/openai/generate-description');
+                if (result.success) {
+                    document.getElementById('description').value = result.data.description;
+                    showToast('Description générée avec succès! (démo)', 'success');
+                } else {
+                    showToast('Erreur IA: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showToast('Erreur IA: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Générer avec IA (DEMO)';
+                btn.disabled = false;
+            }
+        });
+
+        // Génération de tags avec IA (simulation)
+        document.getElementById('generateTags').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const description = document.getElementById('description').value;
+            const categorie = document.getElementById('categorie').value;
+            
+            if (!nom || !description || !categorie) {
+                showToast('Veuillez remplir nom, description et catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateTags');
+            btn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Optimisation... (DEMO)';
+            btn.disabled = true;
+
+            try {
+                const result = await simulateAPICall('/openai/optimize-tags');
+                if (result.success) {
+                    document.getElementById('tags').value = result.data.tags.join(', ');
+                    showToast('Tags optimisés avec succès! (démo)', 'success');
+                } else {
+                    showToast('Erreur IA: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showToast('Erreur IA: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-tags mr-2"></i>Optimiser avec IA (DEMO)';
+                btn.disabled = false;
+            }
+        });
+
+        // Soumission du formulaire (simulation)
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Création... (DEMO)';
+            submitBtn.disabled = true;
+
+            // Collecte des données
+            const formData = new FormData(e.target);
+            const productData = {
+                nom: formData.get('nom'),
+                categorie: formData.get('categorie'),
+                prix: parseFloat(formData.get('prix')),
+                stock: parseInt(formData.get('stock')),
+                stockMinimum: parseInt(formData.get('stockMinimum')) || 5,
+                description: formData.get('description'),
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                images: uploadedImages.map((img, index) => ({
+                    url: img.url,
+                    alt: img.originalName,
+                    isPrimaire: index === 0
+                }))
+            };
+
+            try {
+                const result = await simulateAPICall('/produits', {
+                    method: 'POST',
+                    body: JSON.stringify(productData)
+                });
+
+                if (result.success) {
+                    showToast('Produit créé avec succès en mode démo!', 'success');
+                    showToast('💡 Les données ne sont pas sauvegardées en mode démo', 'info');
+                    setTimeout(() => {
+                        if (confirm('Voulez-vous créer un autre produit?')) {
+                            location.reload();
+                        } else {
+                            window.location.href = './index.html';
+                        }
+                    }, 2000);
+                } else {
+                    showToast('Erreur: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showToast('Erreur: ' + error.message, 'error');
+            } finally {
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Créer le produit (DEMO)';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Système de toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            toast.className = `fixed top-4 right-4 z-50 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg`;
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Initialisation
+        window.onload = () => {
+            updateConnectionStatus();
+            showToast('Mode démo activé - Interface complètement fonctionnelle!', 'info');
+        };
+    </script>
+</body>
+</html>

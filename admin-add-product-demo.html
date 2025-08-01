@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin DEMO - Ajouter Produit | Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .file-upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .file-upload-area:hover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .file-upload-area.dragover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .demo-banner {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Bannière DEMO -->
+    <div class="demo-banner">
+        🧪 MODE DÉMO - Données simulées - Aucune sauvegarde réelle
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    <i class="fas fa-plus-circle text-orange-500 mr-3"></i>
+                    Ajouter un nouveau produit (DEMO)
+                </h1>
+                <p class="text-gray-600 mt-2">Version de démonstration avec données simulées</p>
+            </div>
+
+            <!-- Formulaire principal -->
+            <form id="productForm" class="bg-white rounded-lg shadow-lg p-6 space-y-6">
+                <!-- Informations de base -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom du produit <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="nom" name="nom" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Ex: Smartphone Samsung Galaxy A24">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Catégorie <span class="text-red-500">*</span>
+                        </label>
+                        <select id="categorie" name="categorie" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="">Sélectionner une catégorie</option>
+                            <option value="Électronique">Électronique</option>
+                            <option value="Mode">Mode</option>
+                            <option value="Maison & Jardin">Maison & Jardin</option>
+                            <option value="Automobile">Automobile</option>
+                            <option value="Santé & Beauté">Santé & Beauté</option>
+                            <option value="Sports & Loisirs">Sports & Loisirs</option>
+                            <option value="Industrie & BTP">Industrie & BTP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Prix et stock -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Prix <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="prix" name="prix" required min="0" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <span class="absolute right-3 top-2 text-gray-500">USD</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="stock" name="stock" required min="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock minimum
+                        </label>
+                        <input type="number" id="stockMinimum" name="stockMinimum" min="0" value="5"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <!-- Upload d'images (simulé) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Images du produit (simulées)
+                    </label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" id="imageFiles" name="images" multiple accept="image/*" class="hidden">
+                        <div id="uploadContent">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-700">Images simulées en mode DEMO</p>
+                            <p class="text-sm text-gray-500">Cliquez pour simuler un upload</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Prévisualisation des images -->
+                    <div id="imagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 hidden"></div>
+                </div>
+
+                <!-- Description avec IA simulée -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Description <span class="text-red-500">*</span>
+                        </label>
+                        <button type="button" id="generateDescription" 
+                            class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            <i class="fas fa-magic mr-2"></i>Générer avec IA (DEMO)
+                        </button>
+                    </div>
+                    <textarea id="description" name="description" required rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Description détaillée du produit..."></textarea>
+                </div>
+
+                <!-- Tags simulés -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Tags SEO
+                        </label>
+                        <button type="button" id="generateTags" 
+                            class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            <i class="fas fa-tags mr-2"></i>Optimiser avec IA (DEMO)
+                        </button>
+                    </div>
+                    <input type="text" id="tags" name="tags"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="tag1, tag2, tag3...">
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <button type="button" onclick="window.history.back()" 
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                        Annuler
+                    </button>
+                    <button type="submit" id="submitBtn"
+                        class="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50">
+                        <i class="fas fa-save mr-2"></i>Créer le produit (DEMO)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
+
+    <script>
+        let uploadedImages = [];
+        let demoProducts = []; // Stockage local en mode démo
+
+        // Simulation d'upload d'images
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const imageFiles = document.getElementById('imageFiles');
+        const imagePreview = document.getElementById('imagePreview');
+
+        fileUploadArea.addEventListener('click', () => imageFiles.click());
+        
+        imageFiles.addEventListener('change', (e) => {
+            // Simulation d'upload en mode démo
+            simulateImageUpload(e.target.files);
+        });
+
+        function simulateImageUpload(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    // Créer une URL temporaire pour l'image
+                    const imageUrl = URL.createObjectURL(file);
+                    uploadedImages.push({
+                        url: imageUrl,
+                        originalName: file.name,
+                        size: file.size
+                    });
+                    showToast(`Image "${file.name}" ajoutée (mode démo)`, 'success');
+                }
+            }
+            updateImagePreview();
+        }
+
+        function updateImagePreview() {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            if (uploadedImages.length > 0) {
+                preview.classList.remove('hidden');
+                uploadedImages.forEach((img, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <img src="${img.url}" alt="${img.originalName}" class="image-preview">
+                        <button type="button" onclick="removeImage(${index})"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600">
+                            ×
+                        </button>
+                        ${index === 0 ? '<span class="absolute bottom-0 left-0 bg-orange-500 text-white text-xs px-2 py-1 rounded-tr">Principal</span>' : ''}
+                    `;
+                    preview.appendChild(div);
+                });
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        function removeImage(index) {
+            // Libérer l'URL temporaire
+            URL.revokeObjectURL(uploadedImages[index].url);
+            uploadedImages.splice(index, 1);
+            updateImagePreview();
+        }
+
+        // Génération de description simulée
+        document.getElementById('generateDescription').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            
+            if (!nom || !categorie) {
+                showToast('Veuillez remplir le nom et la catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateDescription');
+            btn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Génération...';
+            btn.disabled = true;
+
+            // Simulation d'IA
+            setTimeout(() => {
+                const descriptions = [
+                    `${nom} est un produit de qualité supérieure dans la catégorie ${categorie}. Conçu pour répondre aux besoins modernes, il offre un excellent rapport qualité-prix.`,
+                    `Découvrez ${nom}, votre nouveau companion idéal en ${categorie}. Alliant style et fonctionnalité, ce produit révolutionnera votre quotidien.`,
+                    `${nom} représente l'innovation dans le domaine ${categorie}. Ses caractéristiques avancées en font un choix incontournable pour les consommateurs exigeants.`
+                ];
+                
+                const randomDesc = descriptions[Math.floor(Math.random() * descriptions.length)];
+                document.getElementById('description').value = randomDesc;
+                showToast('Description générée avec succès (IA simulée)!', 'success');
+                
+                btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Générer avec IA (DEMO)';
+                btn.disabled = false;
+            }, 2000);
+        });
+
+        // Génération de tags simulée
+        document.getElementById('generateTags').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            
+            if (!nom || !categorie) {
+                showToast('Veuillez remplir nom et catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateTags');
+            btn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Optimisation...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const tags = [
+                    nom.toLowerCase().replace(/\s+/g, '-'),
+                    categorie.toLowerCase().replace(/\s+/g, '-'),
+                    'qualité',
+                    'congo',
+                    'mireb',
+                    'commerce',
+                    'vente'
+                ];
+                
+                document.getElementById('tags').value = tags.join(', ');
+                showToast('Tags optimisés avec succès (IA simulée)!', 'success');
+                
+                btn.innerHTML = '<i class="fas fa-tags mr-2"></i>Optimiser avec IA (DEMO)';
+                btn.disabled = false;
+            }, 1500);
+        });
+
+        // Soumission du formulaire en mode démo
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner loading mr-2"></i>Création...';
+            submitBtn.disabled = true;
+
+            // Collecte des données
+            const formData = new FormData(e.target);
+            const productData = {
+                id: Date.now(), // ID simulé
+                nom: formData.get('nom'),
+                categorie: formData.get('categorie'),
+                prix: parseFloat(formData.get('prix')),
+                stock: parseInt(formData.get('stock')),
+                stockMinimum: parseInt(formData.get('stockMinimum')) || 5,
+                description: formData.get('description'),
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                images: uploadedImages.map((img, index) => ({
+                    url: img.url,
+                    alt: img.originalName,
+                    isPrimaire: index === 0
+                })),
+                createdAt: new Date().toISOString()
+            };
+
+            // Simulation d'enregistrement
+            setTimeout(() => {
+                demoProducts.push(productData);
+                showToast('✅ Produit créé avec succès en mode DEMO!', 'success');
+                console.log('🧪 Produit DEMO créé:', productData);
+                console.log('📦 Total produits DEMO:', demoProducts.length);
+                
+                // Reset du formulaire
+                document.getElementById('productForm').reset();
+                uploadedImages.forEach(img => URL.revokeObjectURL(img.url));
+                uploadedImages = [];
+                updateImagePreview();
+                
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Créer le produit (DEMO)';
+                submitBtn.disabled = false;
+                
+                // Affichage des produits créés
+                setTimeout(() => {
+                    showToast(`🎉 ${demoProducts.length} produit(s) en mémoire DEMO`, 'info');
+                }, 3000);
+                
+            }, 2000);
+        });
+
+        // Système de toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            toast.className = `fixed top-4 right-4 z-50 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg`;
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Message d'accueil
+        window.addEventListener('load', () => {
+            showToast('🧪 Mode DEMO activé - Toutes les données sont simulées', 'info');
+        });
+    </script>
+</body>
+</html>

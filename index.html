@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mireb CRM - Accueil</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-blue-50 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto text-center">
+            <!-- Header -->
+            <div class="mb-12">
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-store text-orange-500 mr-4"></i>
+                    Mireb CRM
+                </h1>
+                <p class="text-xl text-gray-600">Système de Gestion Commerciale</p>
+                <div class="mt-4 inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Système Authentifié Opérationnel
+                </div>
+            </div>
+
+            <!-- Interface Principale -->
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+                <!-- Interface Admin Authentifiée -->
+                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center">
+                        <div class="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-shield text-3xl text-orange-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-3">Interface Admin</h2>
+                        <p class="text-gray-600 mb-6">Ajout de produits avec authentification sécurisée</p>
+                        <a href="/login.html" 
+                           class="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors inline-block">
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            Se Connecter
+                        </a>
+                        <div class="mt-3 text-xs text-gray-500">
+                            <i class="fas fa-lock mr-1"></i>Authentification requise
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Public -->
+                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                    <div class="text-center">
+                        <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-chart-bar text-3xl text-blue-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-3">Dashboard</h2>
+                        <p class="text-gray-600 mb-6">Vue d'ensemble du système</p>
+                        <a href="/admin-dashboard.html" 
+                           class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors inline-block">
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            Voir Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations d'authentification -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    Compte Administrateur
+                </h3>
+                <div class="grid md:grid-cols-2 gap-6 text-left">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-2">Identifiants de connexion</h4>
+                        <p class="text-sm text-blue-700"><strong>Email :</strong> mirebshop@gmail.com</p>
+                        <p class="text-sm text-blue-700"><strong>Mot de passe :</strong> Fiacre-19</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-2">Fonctionnalités disponibles</h4>
+                        <ul class="text-sm text-green-700 space-y-1">
+                            <li><i class="fas fa-check mr-2"></i>Ajout de produits</li>
+                            <li><i class="fas fa-check mr-2"></i>Upload d'images réelles</li>
+                            <li><i class="fas fa-check mr-2"></i>Outils IA intégrés</li>
+                            <li><i class="fas fa-check mr-2"></i>Interface sécurisée</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statut Système -->
+            <div class="bg-gray-800 text-white rounded-xl p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-server mr-2"></i>
+                    Statut Système
+                </h3>
+                <div class="grid md:grid-cols-4 gap-4 text-sm">
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="text-green-400 font-semibold">✅ API Backend</div>
+                        <div class="text-gray-300">Port 8080</div>
+                    </div>
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="text-green-400 font-semibold">✅ Authentification</div>
+                        <div class="text-gray-300">Sécurisée</div>
+                    </div>
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="text-green-400 font-semibold">✅ Upload Images</div>
+                        <div class="text-gray-300">Fonctionnel</div>
+                    </div>
+                    <div class="bg-gray-700 rounded p-3">
+                        <div class="text-green-400 font-semibold">✅ Outils IA</div>
+                        <div class="text-gray-300">Actifs</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-gray-500 text-sm">
+                <p>Mireb Commercial - Système de Gestion CRM Authentifié</p>
+                <p>République Démocratique du Congo</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Vérification de l'état de l'API et redirection si déjà connecté
+        async function checkSystemStatus() {
+            try {
+                // Test API
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                if (data.status === 'OK') {
+                    console.log('✅ API connectée:', data);
+                }
+                
+                // Vérifier si déjà connecté
+                const token = localStorage.getItem('mireb_token');
+                if (token) {
+                    const verifyResponse = await fetch('/api/auth/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token })
+                    });
+                    
+                    const verifyResult = await verifyResponse.json();
+                    if (verifyResult.success) {
+                        // Déjà connecté, proposer d'aller à l'admin
+                        const userInfo = JSON.parse(localStorage.getItem('mireb_user'));
+                        if (confirm(`Vous êtes déjà connecté en tant que ${userInfo.name}. Aller à l'interface admin ?`)) {
+                            window.location.href = '/admin-add-product.html';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Erreur système:', error);
+                const statusElements = document.querySelectorAll('.text-green-400');
+                statusElements.forEach(el => {
+                    if (el.textContent.includes('API')) {
+                        el.textContent = '❌ API Backend';
+                        el.className = 'text-red-400 font-semibold';
+                    }
+                });
+            }
+        }
+
+        // Animation d'entrée et vérifications
+        window.addEventListener('load', () => {
+            checkSystemStatus();
+            document.querySelectorAll('.shadow-lg').forEach((el, i) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    el.style.transition = 'all 0.5s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, i * 200);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final - Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-green-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                    🎯 Mireb CRM - Test Final
+                </h1>
+                <p class="text-gray-600">Serveur unifié sans problème CORS</p>
+            </div>
+
+            <!-- Status -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold">Status Système</h2>
+                        <p class="text-gray-600">Vérification automatique</p>
+                    </div>
+                    <div id="systemStatus" class="text-2xl">
+                        <i class="fas fa-spinner fa-spin text-yellow-500"></i>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="font-medium">Frontend</div>
+                        <div id="frontendStatus" class="text-gray-600">Vérification...</div>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="font-medium">API Backend</div>
+                        <div id="apiStatus" class="text-gray-600">Vérification...</div>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="font-medium">Base de données</div>
+                        <div id="dbStatus" class="text-gray-600">En mémoire ✅</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tests Rapides -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <button onclick="testAPI()" class="bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600 transition-colors">
+                    <i class="fas fa-heartbeat text-2xl mb-2"></i>
+                    <div class="font-semibold">Test API</div>
+                </button>
+                
+                <button onclick="testCreateProduct()" class="bg-green-500 text-white p-4 rounded-lg hover:bg-green-600 transition-colors">
+                    <i class="fas fa-plus text-2xl mb-2"></i>
+                    <div class="font-semibold">Créer Produit</div>
+                </button>
+                
+                <button onclick="testUpload()" class="bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600 transition-colors">
+                    <i class="fas fa-cloud-upload-alt text-2xl mb-2"></i>
+                    <div class="font-semibold">Test Upload</div>
+                </button>
+                
+                <button onclick="testAI()" class="bg-orange-500 text-white p-4 rounded-lg hover:bg-orange-600 transition-colors">
+                    <i class="fas fa-robot text-2xl mb-2"></i>
+                    <div class="font-semibold">Test IA</div>
+                </button>
+            </div>
+
+            <!-- Formulaire de Test -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-shopping-cart text-green-500 mr-2"></i>
+                    Test Création Produit Complet
+                </h2>
+                
+                <form id="testForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Nom du produit</label>
+                        <input type="text" id="productName" value="Produit Test Final" 
+                               class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Catégorie</label>
+                        <select id="productCategory" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500">
+                            <option value="Électronique">Électronique</option>
+                            <option value="Mode">Mode</option>
+                            <option value="Automobile">Automobile</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Prix ($)</label>
+                        <input type="number" id="productPrice" value="149.99" step="0.01"
+                               class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Stock</label>
+                        <input type="number" id="productStock" value="25"
+                               class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <button type="submit" class="w-full bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 font-semibold">
+                            <i class="fas fa-rocket mr-2"></i>
+                            CRÉER LE PRODUIT (TEST FINAL)
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <a href="admin-add-product.html" 
+                   class="block bg-indigo-500 text-white text-center py-4 px-6 rounded-lg hover:bg-indigo-600 transition-colors">
+                    <i class="fas fa-tools text-xl mb-2"></i>
+                    <div class="font-semibold">Interface Complète</div>
+                    <div class="text-sm opacity-90">admin-add-product.html</div>
+                </a>
+                
+                <button onclick="runAllTests()" 
+                        class="bg-yellow-500 text-white py-4 px-6 rounded-lg hover:bg-yellow-600 transition-colors">
+                    <i class="fas fa-play-circle text-xl mb-2"></i>
+                    <div class="font-semibold">Lancer Tous les Tests</div>
+                    <div class="text-sm opacity-90">Vérification complète</div>
+                </button>
+            </div>
+
+            <!-- Résultats -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">
+                        <i class="fas fa-terminal text-gray-600 mr-2"></i>
+                        Console de Test
+                    </h2>
+                    <button onclick="clearResults()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        <i class="fas fa-trash mr-1"></i>Effacer
+                    </button>
+                </div>
+                <div id="results" class="bg-gray-900 text-green-400 font-mono text-sm p-4 rounded-lg h-64 overflow-y-auto">
+                    <div>🚀 Console Mireb CRM initialisée...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api'; // Même port, pas de CORS
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const colors = {
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400',
+                info: 'text-blue-400'
+            };
+            
+            const div = document.createElement('div');
+            div.className = colors[type] || colors.info;
+            div.textContent = `[${timestamp}] ${message}`;
+            
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div>🚀 Console Mireb CRM réinitialisée...</div>';
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                log(`🔄 Requête vers: ${url}`);
+                const response = await fetch(url, {
+                    headers: { 'Content-Type': 'application/json', ...options.headers },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Succès: ${response.status}`, 'success');
+                    return { success: true, data, status: response.status };
+                } else {
+                    log(`❌ Erreur: ${response.status} - ${data.message}`, 'error');
+                    return { success: false, data, status: response.status };
+                }
+            } catch (error) {
+                log(`💥 Erreur réseau: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testAPI() {
+            const result = await makeRequest(`${API_BASE}/health`);
+            
+            if (result.success) {
+                document.getElementById('apiStatus').innerHTML = '✅ Fonctionnel';
+                document.getElementById('systemStatus').innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                log(`API Health: ${result.data.message}`, 'success');
+            } else {
+                document.getElementById('apiStatus').innerHTML = '❌ Erreur';
+                document.getElementById('systemStatus').innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
+            }
+        }
+
+        async function testCreateProduct() {
+            const testProduct = {
+                nom: "Produit Test Rapide",
+                description: "Test de création rapide",
+                prix: 99.99,
+                categorie: "Test",
+                stock: 10,
+                ville: "Kinshasa"
+            };
+
+            const result = await makeRequest(`${API_BASE}/produits`, {
+                method: 'POST',
+                body: JSON.stringify(testProduct)
+            });
+
+            if (result.success) {
+                log(`🎉 Produit créé: ID ${result.data.data.id}`, 'success');
+            }
+        }
+
+        async function testUpload() {
+            const result = await makeRequest(`${API_BASE}/upload/single`, {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+
+            if (result.success) {
+                log(`📤 Upload simulé réussi`, 'success');
+            }
+        }
+
+        async function testAI() {
+            const result = await makeRequest(`${API_BASE}/openai/generate-description`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    nom: "Test IA",
+                    categorie: "Électronique"
+                })
+            });
+
+            if (result.success) {
+                log(`🤖 IA Description générée`, 'success');
+            }
+        }
+
+        async function runAllTests() {
+            log('🚀 === DÉBUT TESTS COMPLETS ===', 'warning');
+            await testAPI();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testCreateProduct();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testUpload();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAI();
+            log('✅ === TESTS TERMINÉS ===', 'warning');
+        }
+
+        // Gestionnaire de formulaire
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productData = {
+                nom: document.getElementById('productName').value,
+                categorie: document.getElementById('productCategory').value,
+                prix: parseFloat(document.getElementById('productPrice').value),
+                stock: parseInt(document.getElementById('productStock').value),
+                description: `Description automatique pour ${document.getElementById('productName').value}`,
+                ville: "Kinshasa",
+                stockMinimum: 5,
+                adresse: "Test Avenue",
+                tags: ["test", "final"],
+                caracteristiques: [],
+                createdAt: new Date().toISOString(),
+                createdBy: "Test User"
+            };
+
+            log('🔥 === CRÉATION PRODUIT COMPLÈTE ===', 'warning');
+            log(`📋 Données: ${JSON.stringify(productData, null, 2)}`);
+
+            const result = await makeRequest(`${API_BASE}/produits`, {
+                method: 'POST',
+                body: JSON.stringify(productData)
+            });
+
+            if (result.success) {
+                log(`🎯 SUCCÈS TOTAL! Produit créé avec ID: ${result.data.data.id}`, 'success');
+                log(`📝 Nom: ${result.data.data.nom}`, 'success');
+                log(`💰 Prix: $${result.data.data.prix}`, 'success');
+                log(`📦 Stock: ${result.data.data.stock} unités`, 'success');
+            }
+        });
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            log('🌟 Interface de test final chargée');
+            log(`🔗 API configurée: ${API_BASE}`);
+            
+            document.getElementById('frontendStatus').innerHTML = '✅ Chargé';
+            
+            // Test automatique
+            setTimeout(testAPI, 1000);
+        });
+    </script>
+</body>
+</html>

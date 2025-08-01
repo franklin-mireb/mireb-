@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final - Upload et IA</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">🧪 Test Upload Images et IA</h1>
+        
+        <!-- Section Upload -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">📸 Test Upload Images</h2>
+            <button id="testUpload" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                <i class="fas fa-upload mr-2"></i>Tester Upload
+            </button>
+            <div id="uploadResult" class="mt-4"></div>
+        </div>
+
+        <!-- Section IA Description -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🤖 Test IA - Génération Description</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <input type="text" id="testNom" placeholder="Nom du produit" class="border rounded px-3 py-2">
+                <select id="testCategorie" class="border rounded px-3 py-2">
+                    <option value="">Catégorie</option>
+                    <option value="Électronique">Électronique</option>
+                    <option value="Mode">Mode</option>
+                    <option value="Automobile">Automobile</option>
+                </select>
+            </div>
+            <button id="testIA" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-robot mr-2"></i>Tester IA Description
+            </button>
+            <div id="iaResult" class="mt-4"></div>
+        </div>
+
+        <!-- Section IA Tags -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🏷️ Test IA - Optimisation Tags</h2>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <input type="text" id="testNomTags" placeholder="Nom du produit" class="border rounded px-3 py-2">
+                <input type="text" id="testCategorieTags" placeholder="Catégorie" class="border rounded px-3 py-2">
+                <input type="text" id="testVille" placeholder="Ville" class="border rounded px-3 py-2">
+            </div>
+            <button id="testTags" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                <i class="fas fa-tags mr-2"></i>Tester IA Tags
+            </button>
+            <div id="tagsResult" class="mt-4"></div>
+        </div>
+
+        <!-- Logs -->
+        <div class="bg-gray-800 text-green-400 rounded-lg p-4">
+            <h3 class="text-lg font-semibold mb-2">📋 Logs de Test</h3>
+            <div id="logs" class="font-mono text-sm max-h-96 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
+            logsDiv.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            const bgColor = isError ? 'bg-red-100 border-red-300' : 'bg-green-100 border-green-300';
+            element.innerHTML = `
+                <div class="border rounded p-3 ${bgColor}">
+                    <pre class="text-sm">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        // Test Upload
+        document.getElementById('testUpload').addEventListener('click', async () => {
+            log('🔄 Test upload d\'image...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/upload/single`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: 'test-image.jpg',
+                        fileSize: 250000,
+                        fileType: 'image/jpeg'
+                    })
+                });
+
+                const result = await response.json();
+                log('✅ Upload testé avec succès', 'success');
+                showResult('uploadResult', result);
+            } catch (error) {
+                log('❌ Erreur upload: ' + error.message, 'error');
+                showResult('uploadResult', { error: error.message }, true);
+            }
+        });
+
+        // Test IA Description
+        document.getElementById('testIA').addEventListener('click', async () => {
+            const nom = document.getElementById('testNom').value;
+            const categorie = document.getElementById('testCategorie').value;
+            
+            if (!nom || !categorie) {
+                log('⚠️ Nom et catégorie requis', 'error');
+                return;
+            }
+
+            log(`🔄 Test IA description pour: ${nom} (${categorie})`, 'info');
+            try {
+                const response = await fetch(`${API_BASE}/openai/generate-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie })
+                });
+
+                const result = await response.json();
+                log('✅ Description IA générée', 'success');
+                showResult('iaResult', result);
+            } catch (error) {
+                log('❌ Erreur IA description: ' + error.message, 'error');
+                showResult('iaResult', { error: error.message }, true);
+            }
+        });
+
+        // Test IA Tags
+        document.getElementById('testTags').addEventListener('click', async () => {
+            const nom = document.getElementById('testNomTags').value;
+            const categorie = document.getElementById('testCategorieTags').value;
+            const ville = document.getElementById('testVille').value;
+            
+            if (!nom || !categorie) {
+                log('⚠️ Nom et catégorie requis', 'error');
+                return;
+            }
+
+            log(`🔄 Test IA tags pour: ${nom} (${categorie}, ${ville})`, 'info');
+            try {
+                const response = await fetch(`${API_BASE}/openai/optimize-tags`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie, ville })
+                });
+
+                const result = await response.json();
+                log('✅ Tags IA optimisés', 'success');
+                showResult('tagsResult', result);
+            } catch (error) {
+                log('❌ Erreur IA tags: ' + error.message, 'error');
+                showResult('tagsResult', { error: error.message }, true);
+            }
+        });
+
+        // Log initial
+        log('🚀 Interface de test chargée', 'success');
+    </script>
+</body>
+</html>

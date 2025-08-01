@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API OpenAI - Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/your-code.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+                🧪 Test API OpenAI - Mireb CRM
+            </h1>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Test Génération Description -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-magic mr-2 text-purple-500"></i>
+                        Génération Description
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <input 
+                            type="text" 
+                            id="product-name" 
+                            placeholder="Nom du produit"
+                            value="Smartphone Galaxy Pro X"
+                            class="w-full border px-3 py-2 rounded"
+                        />
+                        <select id="product-category" class="w-full border px-3 py-2 rounded">
+                            <option>Électronique</option>
+                            <option>Vêtements</option>
+                            <option>Maison</option>
+                            <option>Sport</option>
+                        </select>
+                        <input 
+                            type="number" 
+                            id="product-price" 
+                            placeholder="Prix ($)"
+                            value="899"
+                            class="w-full border px-3 py-2 rounded"
+                        />
+                        <input 
+                            type="text" 
+                            id="product-features" 
+                            placeholder="Caractéristiques (séparées par virgules)"
+                            value="Écran AMOLED 6.7', Caméra 108MP, 5G, Résistant à l'eau"
+                            class="w-full border px-3 py-2 rounded"
+                        />
+                        <select id="product-target" class="w-full border px-3 py-2 rounded">
+                            <option value="general">Public général</option>
+                            <option value="jeune">Jeunes (18-30 ans)</option>
+                            <option value="adulte">Adultes (30-50 ans)</option>
+                            <option value="senior">Seniors (50+ ans)</option>
+                            <option value="professionnel">Professionnels</option>
+                        </select>
+                        
+                        <button 
+                            onclick="testGenerateDescription()" 
+                            class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded flex items-center justify-center"
+                            id="btn-generate"
+                        >
+                            <i class="fas fa-magic mr-2"></i>
+                            Générer Description
+                        </button>
+                        
+                        <div id="description-result" class="mt-4 hidden">
+                            <h3 class="font-semibold mb-2">Résultat :</h3>
+                            <div id="description-content" class="bg-gray-50 p-3 rounded border"></div>
+                            <div id="description-info" class="text-xs text-gray-500 mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Analyse Image -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-search mr-2 text-indigo-500"></i>
+                        Analyse Image
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <input 
+                            type="text" 
+                            id="image-url" 
+                            placeholder="URL de l'image"
+                            value="https://via.placeholder.com/600x400"
+                            class="w-full border px-3 py-2 rounded"
+                        />
+                        <input 
+                            type="text" 
+                            id="image-product-name" 
+                            placeholder="Nom du produit"
+                            value="Smartphone Galaxy Pro X"
+                            class="w-full border px-3 py-2 rounded"
+                        />
+                        
+                        <button 
+                            onclick="testAnalyzeImage()" 
+                            class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded flex items-center justify-center"
+                            id="btn-analyze"
+                        >
+                            <i class="fas fa-search mr-2"></i>
+                            Analyser Image
+                        </button>
+                        
+                        <div id="analysis-result" class="mt-4 hidden">
+                            <h3 class="font-semibold mb-2">Résultat :</h3>
+                            <div id="analysis-content" class="bg-gray-50 p-3 rounded border"></div>
+                            <div id="analysis-info" class="text-xs text-gray-500 mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Optimisation Tags -->
+                <div class="bg-white p-6 rounded-lg shadow-lg md:col-span-2">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fas fa-tags mr-2 text-green-500"></i>
+                        Optimisation Tags SEO
+                    </h2>
+                    
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <input 
+                            type="text" 
+                            id="tags-name" 
+                            placeholder="Nom du produit"
+                            value="Smartphone Galaxy Pro X"
+                            class="border px-3 py-2 rounded"
+                        />
+                        <input 
+                            type="text" 
+                            id="tags-category" 
+                            placeholder="Catégorie"
+                            value="Électronique"
+                            class="border px-3 py-2 rounded"
+                        />
+                        <button 
+                            onclick="testOptimizeTags()" 
+                            class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded flex items-center justify-center"
+                            id="btn-optimize"
+                        >
+                            <i class="fas fa-tags mr-2"></i>
+                            Optimiser Tags
+                        </button>
+                    </div>
+                    
+                    <div id="tags-result" class="mt-4 hidden">
+                        <h3 class="font-semibold mb-2">Tags générés :</h3>
+                        <div id="tags-content" class="bg-gray-50 p-3 rounded border"></div>
+                        <div id="tags-info" class="text-xs text-gray-500 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logs -->
+            <div class="mt-8 bg-gray-800 text-green-400 p-4 rounded-lg">
+                <h3 class="font-semibold mb-2">📋 Logs de test :</h3>
+                <div id="logs" class="text-sm font-mono space-y-1 max-h-64 overflow-y-auto">
+                    <div>✅ Page de test chargée</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration API
+        const API_BASE_URL = window.location.hostname.includes('github.io') 
+            ? 'https://api-mireb.herokuapp.com/api'  // URL de production
+            : 'http://localhost:5000/api';           // URL locale
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            const div = document.createElement('div');
+            div.innerHTML = `[${timestamp}] ${icon} ${message}`;
+            if (type === 'error') div.className = 'text-red-400';
+            if (type === 'success') div.className = 'text-green-400';
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        async function makeAPICall(endpoint, data) {
+            const token = localStorage.getItem('mireb_token');
+            
+            if (!token) {
+                log('⚠️ Aucun token d\'authentification trouvé. Utilisation du mode test.', 'error');
+                return { success: false, error: 'Non authentifié' };
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.message || 'Erreur API');
+                }
+
+                return result;
+            } catch (error) {
+                log(`Erreur API: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testGenerateDescription() {
+            const btn = document.getElementById('btn-generate');
+            const result = document.getElementById('description-result');
+            const content = document.getElementById('description-content');
+            const info = document.getElementById('description-info');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Génération...';
+            
+            log('🚀 Test génération description...');
+            
+            const data = {
+                nom: document.getElementById('product-name').value,
+                categorie: document.getElementById('product-category').value,
+                prix: parseInt(document.getElementById('product-price').value),
+                features: document.getElementById('product-features').value.split(',').map(f => f.trim()),
+                target: document.getElementById('product-target').value
+            };
+            
+            const response = await makeAPICall('/openai/generate-description', data);
+            
+            if (response.success) {
+                content.innerHTML = response.description;
+                info.textContent = `Généré par: ${response.generated_by} | Modèle: ${response.model || 'N/A'}`;
+                result.classList.remove('hidden');
+                log('✅ Description générée avec succès!', 'success');
+                
+                if (response.warning) {
+                    log(`⚠️ ${response.warning}`, 'info');
+                }
+            } else {
+                content.innerHTML = `<span class="text-red-500">Erreur: ${response.error}</span>`;
+                info.textContent = 'Échec de génération';
+                result.classList.remove('hidden');
+                log(`❌ Échec génération: ${response.error}`, 'error');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-magic mr-2"></i>Générer Description';
+        }
+
+        async function testAnalyzeImage() {
+            const btn = document.getElementById('btn-analyze');
+            const result = document.getElementById('analysis-result');
+            const content = document.getElementById('analysis-content');
+            const info = document.getElementById('analysis-info');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse...';
+            
+            log('🔍 Test analyse image...');
+            
+            const data = {
+                imageUrl: document.getElementById('image-url').value,
+                productName: document.getElementById('image-product-name').value
+            };
+            
+            const response = await makeAPICall('/openai/analyze-image', data);
+            
+            if (response.success) {
+                const analysis = response.analysis;
+                content.innerHTML = `
+                    <div><b>Caractéristiques:</b> ${analysis.features.join(', ')}</div>
+                    <div><b>Couleurs:</b> ${analysis.colors.join(', ')}</div>
+                    <div><b>Matériaux:</b> ${analysis.materials.join(', ')}</div>
+                    <div><b>Style:</b> ${analysis.style}</div>
+                    <div><b>Points de vente:</b> ${analysis.selling_points.join(', ')}</div>
+                `;
+                info.textContent = `Analysé par: ${response.generated_by} | Modèle: ${response.model || 'N/A'}`;
+                result.classList.remove('hidden');
+                log('✅ Image analysée avec succès!', 'success');
+                
+                if (response.warning) {
+                    log(`⚠️ ${response.warning}`, 'info');
+                }
+            } else {
+                content.innerHTML = `<span class="text-red-500">Erreur: ${response.error}</span>`;
+                info.textContent = 'Échec d\'analyse';
+                result.classList.remove('hidden');
+                log(`❌ Échec analyse: ${response.error}`, 'error');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search mr-2"></i>Analyser Image';
+        }
+
+        async function testOptimizeTags() {
+            const btn = document.getElementById('btn-optimize');
+            const result = document.getElementById('tags-result');
+            const content = document.getElementById('tags-content');
+            const info = document.getElementById('tags-info');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Optimisation...';
+            
+            log('🏷️ Test optimisation tags...');
+            
+            const data = {
+                nom: document.getElementById('tags-name').value,
+                categorie: document.getElementById('tags-category').value,
+                description: 'Produit de test pour l\'optimisation des tags SEO'
+            };
+            
+            const response = await makeAPICall('/openai/optimize-tags', data);
+            
+            if (response.success) {
+                content.innerHTML = response.tags.map(tag => 
+                    `<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-1 mb-1">${tag}</span>`
+                ).join('');
+                info.textContent = `Généré par: ${response.generated_by} | ${response.tags.length} tags`;
+                result.classList.remove('hidden');
+                log('✅ Tags optimisés avec succès!', 'success');
+                
+                if (response.warning) {
+                    log(`⚠️ ${response.warning}`, 'info');
+                }
+            } else {
+                content.innerHTML = `<span class="text-red-500">Erreur: ${response.error}</span>`;
+                info.textContent = 'Échec d\'optimisation';
+                result.classList.remove('hidden');
+                log(`❌ Échec optimisation: ${response.error}`, 'error');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-tags mr-2"></i>Optimiser Tags';
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🌐 API Base URL: ' + API_BASE_URL);
+            
+            const token = localStorage.getItem('mireb_token');
+            if (token) {
+                log('🔐 Token d\'authentification trouvé', 'success');
+            } else {
+                log('⚠️ Aucun token d\'authentification. Connectez-vous d\'abord dans l\'application principale.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

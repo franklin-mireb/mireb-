@@ -1,0 +1,23 @@
+{
+  "name": "mireb-backend-demo",
+  "version": "1.0.0",
+  "description": "Backend de démonstration pour Mireb CRM avec données simulées",
+  "type": "module",
+  "main": "backend-demo.js",
+  "scripts": {
+    "start": "node backend-demo.js",
+    "demo": "./start-demo-backend.sh"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": [
+    "demo",
+    "crm",
+    "api",
+    "express"
+  ],
+  "author": "Mireb Commercial",
+  "license": "MIT"
+}

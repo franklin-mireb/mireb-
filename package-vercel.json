@@ -1,0 +1,28 @@
+{
+  "name": "mireb-api",
+  "version": "1.0.0",
+  "description": "Backend API pour Mireb CRM",
+  "main": "api-github-pages.js",
+  "scripts": {
+    "start": "node api-github-pages.js",
+    "dev": "nodemon api-github-pages.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mongoose": "^7.5.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": [
+    "mireb",
+    "crm",
+    "api",
+    "congo",
+    "mongodb"
+  ],
+  "author": "Franklin Mireb",
+  "license": "MIT"
+}

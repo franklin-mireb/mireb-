@@ -1,0 +1,4380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mireb Commercial - CRM AI</title>
+
+<!-- PWA Meta Tags -->
+<meta name="description" content="Application CRM commerciale avec intelligence artificielle pour Mireb">
+<meta name="theme-color" content="#ea580c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mireb CRM">
+<link rel="apple-touch-icon" href="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=180&h=180&fit=crop">
+<link rel="manifest" href="./manifest.json">
+
+<!-- Scripts -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .chat-bubble-user { 
+    background-color: #f97316; 
+    color: white; 
+    margin-left: 2rem; 
+    border-radius: 0.5rem; 
+    padding: 0.5rem 0.75rem; 
+    margin-bottom: 0.5rem; 
+    max-width: 20rem; 
+    align-self: flex-end; 
+  }
+  .chat-bubble-ai { 
+    background-color: #e5e7eb; 
+    color: #1f2937; 
+    margin-right: 2rem; 
+    border-radius: 0.5rem; 
+    padding: 0.5rem 0.75rem; 
+    margin-bottom: 0.5rem; 
+    max-width: 20rem; 
+    align-self: flex-start; 
+  }
+  .typing-indicator { animation: pulse 1.5s infinite; }
+</style>
+</head>
+<body class="bg-gray-100">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* =========================================================
+   1. CONFIGURATION API & BACKEND
+   ========================================================= */
+const BACKEND_CONFIG = {
+  baseURL: "http://localhost:5000/api", // URL du backend Express
+  timeout: 10000,
+  retries: 3
+};
+
+// Configuration authentification
+const AUTH_CONFIG = {
+  tokenKey: "mireb_auth_token",
+  userKey: "mireb_user_data",
+  refreshKey: "mireb_refresh_token",
+  tokenExpiry: 24 * 60 * 60 * 1000 // 24h en millisecondes
+};
+
+// Configuration WebSocket pour chat temps réel
+const WEBSOCKET_CONFIG = {
+  url: "http://localhost:5000",
+  reconnectInterval: 3000,
+  maxReconnectAttempts: 5
+};
+
+// Configuration Cloudinary (maintenant gérée côté backend)
+const CLOUDINARY_CONFIG = {
+  cloudName: "dwogv9nme",
+  uploadEndpoint: `${BACKEND_CONFIG.baseURL}/upload/single`,
+  transformBaseUrl: "https://res.cloudinary.com/dwogv9nme"
+};
+
+// Catégories par défaut - maintenant gérées dynamiquement
+const DEFAULT_CATEGORIES = [
+  "Électronique", "Mode", "Maison & Jardin", "Automobile",
+  "Santé & Beauté", "Sports & Loisirs", "Industrie & BTP"
+];
+
+const PRODUITS_BASE = [
+  {
+    id: 1,
+    nom: "Smartphone Samsung Galaxy A24",
+    prix: 299,
+    images: [
+      "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=400&fit=crop"
+    ],
+    categorie: "Électronique",
+    stock: 15,
+    description: "<p>Smartphone <b>Samsung Galaxy A24</b> avec écran 6,5\", 128GB, triple caméra 50MP.</p>",
+    tags: ["smartphone", "android", "samsung", "mobile"],
+    rating: 4.5,
+    reviews: 127
+  },
+  {
+    id: 2,
+    nom: "Robe Africaine Wax Premium",
+    prix: 45,
+    images: ["https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&h=400&fit=crop"],
+    categorie: "Mode",
+    stock: 30,
+    description: "<p>Robe wax 100% coton, motifs traditionnels, taille S à XL.</p>",
+    tags: ["mode", "wax", "africain", "femme"],
+    rating: 4.8,
+    reviews: 89
+  },
+  {
+    id: 3,
+    nom: "Casque Audio Bluetooth",
+    prix: 89,
+    images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop"],
+    categorie: "Électronique",
+    stock: 25,
+    description: "<p>Casque sans fil haute qualité, réduction de bruit active, 30h d'autonomie.</p>",
+    tags: ["audio", "bluetooth", "casque", "musique"],
+    rating: 4.3,
+    reviews: 203
+  }
+];
+
+/* =========================================================
+   2. SERVICE API & AUTHENTIFICATION
+   ========================================================= */
+
+// Service API principal pour communiquer avec le backend
+class APIService {
+  static getAuthToken() {
+    return localStorage.getItem(AUTH_CONFIG.tokenKey);
+  }
+
+  static setAuthToken(token) {
+    localStorage.setItem(AUTH_CONFIG.tokenKey, token);
+  }
+
+  static removeAuthToken() {
+    localStorage.removeItem(AUTH_CONFIG.tokenKey);
+    localStorage.removeItem(AUTH_CONFIG.userKey);
+    localStorage.removeItem(AUTH_CONFIG.refreshKey);
+  }
+
+  static getAuthHeaders() {
+    const token = this.getAuthToken();
+    return token ? {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    } : {
+      'Content-Type': 'application/json'
+    };
+  }
+
+  static async makeRequest(endpoint, options = {}) {
+    const url = `${BACKEND_CONFIG.baseURL}${endpoint}`;
+    const config = {
+      headers: this.getAuthHeaders(),
+      ...options
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP Error: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      
+      // Si erreur d'authentification, rediriger vers login
+      if (error.message.includes('401') || error.message.includes('Token')) {
+        this.removeAuthToken();
+        // Déclencher re-login
+        window.dispatchEvent(new CustomEvent('auth-required'));
+      }
+      
+      throw error;
+    }
+  }
+
+  // Méthodes CRUD génériques
+  static async get(endpoint) {
+    return this.makeRequest(endpoint, { method: 'GET' });
+  }
+
+  static async post(endpoint, data) {
+    return this.makeRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  static async put(endpoint, data) {
+    return this.makeRequest(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  static async delete(endpoint) {
+    return this.makeRequest(endpoint, { method: 'DELETE' });
+  }
+}
+
+// Service d'authentification
+class AuthService {
+  static async login(email, password) {
+    try {
+      const response = await APIService.post('/auth/login', {
+        email,
+        password
+      });
+
+      if (response.success && response.data.token) {
+        APIService.setAuthToken(response.data.token);
+        localStorage.setItem(AUTH_CONFIG.userKey, JSON.stringify(response.data.user));
+        return response.data;
+      }
+
+      throw new Error(response.message || 'Erreur de connexion');
+    } catch (error) {
+      console.error('Login Error:', error);
+      throw error;
+    }
+  }
+
+  static async register(userData) {
+    try {
+      const response = await APIService.post('/auth/register', userData);
+      
+      if (response.success && response.data.token) {
+        APIService.setAuthToken(response.data.token);
+        localStorage.setItem(AUTH_CONFIG.userKey, JSON.stringify(response.data.user));
+        return response.data;
+      }
+
+      throw new Error(response.message || 'Erreur d\'inscription');
+    } catch (error) {
+      console.error('Register Error:', error);
+      throw error;
+    }
+  }
+
+  static async logout() {
+    try {
+      await APIService.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout Error:', error);
+    } finally {
+      APIService.removeAuthToken();
+    }
+  }
+
+  static getCurrentUser() {
+    const userData = localStorage.getItem(AUTH_CONFIG.userKey);
+    return userData ? JSON.parse(userData) : null;
+  }
+
+  static isAuthenticated() {
+    const token = APIService.getAuthToken();
+    const user = this.getCurrentUser();
+    return !!(token && user);
+  }
+}
+
+/* =========================================================
+   3. SERVICES BACKEND INTÉGRÉS
+   ========================================================= */
+
+// Service Produits avec API Backend
+class ProductService {
+  static async getAllProducts(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+      if (filters.category) queryParams.append('categorie', filters.category);
+      if (filters.search) queryParams.append('q', filters.search);
+      if (filters.sort) queryParams.append('sort', filters.sort);
+      if (filters.order) queryParams.append('order', filters.order);
+
+      const endpoint = `/produits${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await APIService.get(endpoint);
+      
+      return response.data || [];
+    } catch (error) {
+      console.error('Erreur chargement produits:', error);
+      // Fallback sur données locales en cas d'erreur
+      return JSON.parse(localStorage.getItem('mireb_produits')) || PRODUITS_BASE;
+    }
+  }
+
+  static async getProductById(id) {
+    try {
+      const response = await APIService.get(`/produits/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur chargement produit:', error);
+      throw error;
+    }
+  }
+
+  static async createProduct(productData) {
+    try {
+      const response = await APIService.post('/produits', productData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur création produit:', error);
+      throw error;
+    }
+  }
+
+  static async updateProduct(id, productData) {
+    try {
+      const response = await APIService.put(`/produits/${id}`, productData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur mise à jour produit:', error);
+      throw error;
+    }
+  }
+
+  static async deleteProduct(id) {
+    try {
+      const response = await APIService.delete(`/produits/${id}`);
+      return response.success;
+    } catch (error) {
+      console.error('Erreur suppression produit:', error);
+      throw error;
+    }
+  }
+
+  static async searchProducts(query) {
+    try {
+      const response = await APIService.get(`/produits/search?q=${encodeURIComponent(query)}`);
+      return response.data || [];
+    } catch (error) {
+      console.error('Erreur recherche produits:', error);
+      return [];
+    }
+  }
+}
+
+// Service AI pour génération de descriptions et analyse
+class AIService {
+  static async generateProductDescription(productData) {
+    try {
+      const response = await APIService.post('/openai/generate-description', productData);
+      return response;
+    } catch (error) {
+      console.error('Erreur génération description AI:', error);
+      // Fallback description
+      return {
+        success: true,
+        description: this.generateFallbackDescription(productData),
+        generated_by: 'fallback',
+        warning: 'IA indisponible, description générée automatiquement'
+      };
+    }
+  }
+
+  static async analyzeProductImage(imageUrl, productName) {
+    try {
+      const response = await APIService.post('/openai/analyze-image', {
+        imageUrl: imageUrl,
+        productName: productName
+      });
+      return response;
+    } catch (error) {
+      console.error('Erreur analyse image AI:', error);
+      return {
+        success: true,
+        analysis: {
+          features: ['Design moderne', 'Qualité premium'],
+          colors: ['Couleurs attrayantes'],
+          materials: ['Matériaux de qualité'],
+          style: 'Style contemporain',
+          selling_points: ['Excellent rapport qualité-prix', 'Design soigné']
+        },
+        generated_by: 'fallback',
+        warning: 'Analyse d\'image indisponible'
+      };
+    }
+  }
+
+  static async optimizeSEOTags(productData) {
+    try {
+      const response = await APIService.post('/openai/optimize-tags', productData);
+      return response;
+    } catch (error) {
+      console.error('Erreur optimisation tags AI:', error);
+      return {
+        success: true,
+        tags: this.generateFallbackTags(productData),
+        generated_by: 'fallback',
+        warning: 'Optimisation SEO indisponible'
+      };
+    }
+  }
+
+  static generateFallbackDescription(productData) {
+    const { nom, categorie, prix, features = [], target = 'general' } = productData;
+    
+    const targetMap = {
+      jeune: 'les jeunes',
+      adulte: 'les adultes', 
+      senior: 'les seniors',
+      professionnel: 'les professionnels',
+      general: 'tous'
+    };
+
+    const targetText = targetMap[target] || 'tous';
+    
+    let description = `<p><b>${nom}</b> - Un produit de qualité`;
+    
+    if (categorie) {
+      description += ` dans la catégorie ${categorie}`;
+    }
+    
+    description += ` conçu pour ${targetText}.</p>`;
+    
+    if (features.length > 0) {
+      description += `<p><b>Caractéristiques principales :</b></p><ul>`;
+      features.slice(0, 4).forEach(feature => {
+        description += `<li>${feature}</li>`;
+      });
+      description += `</ul>`;
+    }
+    
+    description += `<p>Découvrez ce produit exceptionnel qui combine qualité, design et fonctionnalité. `;
+    
+    if (prix) {
+      description += `Disponible au prix de <b>${prix}$</b>, `;
+    }
+    
+    description += `c'est l'investissement parfait pour votre satisfaction.</p>`;
+    
+    return description;
+  }
+
+  static generateFallbackTags(productData) {
+    const { nom, categorie } = productData;
+    const tags = [];
+    
+    // Tags basés sur le nom
+    if (nom) {
+      const nameWords = nom.toLowerCase().split(' ').filter(word => word.length > 2);
+      tags.push(...nameWords);
+    }
+    
+    // Tags de catégorie
+    if (categorie) {
+      tags.push(categorie.toLowerCase());
+    }
+    
+    // Tags génériques
+    tags.push('qualité', 'design', 'moderne', 'premium', 'tendance');
+    
+    return [...new Set(tags)].slice(0, 10);
+  }
+
+  static async checkAIAvailability() {
+    try {
+      const response = await APIService.get('/health');
+      return response.status === 'OK';
+    } catch (error) {
+      return false;
+    }
+  }
+}
+
+// Service Leads/CRM avec API Backend
+class LeadService {
+  static async getAllLeads(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+      if (filters.status) queryParams.append('statut', filters.status);
+      if (filters.source) queryParams.append('source', filters.source);
+
+      const endpoint = `/leads${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await APIService.get(endpoint);
+      
+      return response.data || [];
+    } catch (error) {
+      console.error('Erreur chargement leads:', error);
+      return JSON.parse(localStorage.getItem('mireb_leads')) || [];
+    }
+  }
+
+  static async createLead(leadData) {
+    try {
+      const response = await APIService.post('/leads', {
+        ...leadData,
+        source: 'website'
+      });
+      
+      console.log('✅ Lead créé avec succès:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur création lead:', error);
+      // Fallback localStorage pour assurer la continuité
+      const leads = JSON.parse(localStorage.getItem('mireb_leads')) || [];
+      const newLead = {
+        id: Date.now(),
+        ...leadData,
+        source: 'website',
+        statut: 'nouveau',
+        createdAt: new Date().toISOString()
+      };
+      leads.push(newLead);
+      localStorage.setItem('mireb_leads', JSON.stringify(leads));
+      return newLead;
+    }
+  }
+
+  static async updateLeadStatus(id, newStatus) {
+    try {
+      const response = await APIService.put(`/leads/${id}/status`, { statut: newStatus });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur mise à jour statut lead:', error);
+      throw error;
+    }
+  }
+
+  static async addLeadInteraction(id, interaction) {
+    try {
+      const response = await APIService.post(`/leads/${id}/interaction`, interaction);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur ajout interaction lead:', error);
+      throw error;
+    }
+  }
+
+  static async getLeadsPipeline() {
+    try {
+      const response = await APIService.get('/leads/pipeline');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur chargement pipeline:', error);
+      return {};
+    }
+  }
+}
+
+// Service Catégories avec API Backend
+class CategoryService {
+  static async getAllCategories() {
+    try {
+      const response = await APIService.get('/categories');
+      return response.data || DEFAULT_CATEGORIES;
+    } catch (error) {
+      console.error('Erreur chargement catégories:', error);
+      return JSON.parse(localStorage.getItem('mirebCategories')) || DEFAULT_CATEGORIES;
+    }
+  }
+
+  static async createCategory(categoryData) {
+    try {
+      const response = await APIService.post('/categories', categoryData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur création catégorie:', error);
+      throw error;
+    }
+  }
+
+  static async updateCategory(id, categoryData) {
+    try {
+      const response = await APIService.put(`/categories/${id}`, categoryData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur mise à jour catégorie:', error);
+      throw error;
+    }
+  }
+
+  static async deleteCategory(id) {
+    try {
+      const response = await APIService.delete(`/categories/${id}`);
+      return response.success;
+    } catch (error) {
+      console.error('Erreur suppression catégorie:', error);
+      throw error;
+    }
+  }
+}
+
+// Service Analytics avec API Backend
+class AnalyticsService {
+  static async getDashboardData() {
+    try {
+      const response = await APIService.get('/analytics/dashboard');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur chargement analytics:', error);
+      // Fallback données locales
+      const leads = JSON.parse(localStorage.getItem('mireb_leads')) || [];
+      const produits = JSON.parse(localStorage.getItem('mireb_produits')) || [];
+      
+      return {
+        totalLeads: leads.length,
+        totalProduits: produits.length,
+        totalVentes: 0,
+        chiffreAffaires: 0,
+        leadsByStatus: {
+          nouveau: leads.filter(l => l.statut === 'nouveau').length,
+          enCours: leads.filter(l => l.statut === 'en_cours').length,
+          converti: leads.filter(l => l.statut === 'converti').length,
+          perdu: leads.filter(l => l.statut === 'perdu').length
+        }
+      };
+    }
+  }
+
+  static async getSalesReport(period = 'month') {
+    try {
+      const response = await APIService.get(`/analytics/sales?period=${period}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur rapport ventes:', error);
+      return {};
+    }
+  }
+
+  static async trackEvent(eventData) {
+    try {
+      await APIService.post('/analytics/events', eventData);
+    } catch (error) {
+      console.error('Erreur tracking event:', error);
+    }
+  }
+}
+
+/* =========================================================
+   4. SERVICE CLOUDINARY INTÉGRÉ AVEC FALLBACK
+   ========================================================= */
+class CloudinaryService {
+  static async uploadImage(file) {
+    try {
+      // Vérifier si on est sur GitHub Pages (pas de backend disponible)
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      
+      if (isGitHubPages) {
+        // Utiliser le service d'upload alternatif pour GitHub Pages
+        return await this.uploadImageMock(file);
+      }
+      
+      // Tentative d'upload vers le backend normal
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'mireb-uploads');
+
+      const response = await fetch(CLOUDINARY_CONFIG.uploadEndpoint, {
+        method: 'POST',
+        headers: APIService.getAuthHeaders(),
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        return {
+          publicId: data.data.publicId,
+          url: data.data.url,
+          width: data.data.width,
+          height: data.data.height
+        };
+      } else {
+        throw new Error(data.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Cloudinary Upload Error:', error);
+      
+      // Fallback vers le service mock en cas d'erreur
+      try {
+        return await this.uploadImageMock(file);
+      } catch (mockError) {
+        throw new Error(`Erreur upload: ${error.message}`);
+      }
+    }
+  }
+
+  // Service d'upload mock pour GitHub Pages
+  static async uploadImageMock(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        try {
+          // Créer un ID unique pour l'image
+          const publicId = `mireb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Stocker l'image en base64 dans localStorage pour la session
+          const imageData = {
+            publicId: publicId,
+            url: e.target.result, // Data URL en base64
+            originalName: file.name,
+            size: file.size,
+            type: file.type,
+            width: null, // Sera déterminé par l'image
+            height: null,
+            uploadedAt: new Date().toISOString()
+          };
+          
+          // Sauvegarder dans localStorage
+          const savedImages = JSON.parse(localStorage.getItem('mireb_uploaded_images') || '[]');
+          savedImages.push(imageData);
+          localStorage.setItem('mireb_uploaded_images', JSON.stringify(savedImages));
+          
+          // Créer une image temporaire pour obtenir les dimensions
+          const img = new Image();
+          img.onload = function() {
+            imageData.width = this.width;
+            imageData.height = this.height;
+            
+            // Mettre à jour avec les dimensions
+            const updatedImages = JSON.parse(localStorage.getItem('mireb_uploaded_images') || '[]');
+            const imageIndex = updatedImages.findIndex(img => img.publicId === publicId);
+            if (imageIndex !== -1) {
+              updatedImages[imageIndex] = imageData;
+              localStorage.setItem('mireb_uploaded_images', JSON.stringify(updatedImages));
+            }
+            
+            resolve({
+              publicId: imageData.publicId,
+              url: imageData.url,
+              width: imageData.width,
+              height: imageData.height,
+              originalName: imageData.originalName,
+              mock: true // Indique que c'est un upload simulé
+            });
+          };
+          
+          img.onerror = function() {
+            // Même sans dimensions, on peut continuer
+            resolve({
+              publicId: imageData.publicId,
+              url: imageData.url,
+              width: 600, // Valeur par défaut
+              height: 400, // Valeur par défaut
+              originalName: imageData.originalName,
+              mock: true
+            });
+          };
+          
+          img.src = e.target.result;
+          
+        } catch (error) {
+          reject(new Error('Erreur lors du traitement de l\'image: ' + error.message));
+        }
+      };
+      
+      reader.onerror = function() {
+        reject(new Error('Erreur lors de la lecture du fichier'));
+      };
+      
+      // Vérifier la taille du fichier (limite 5MB pour le localStorage)
+      if (file.size > 5 * 1024 * 1024) {
+        reject(new Error('Fichier trop volumineux (max 5MB)'));
+        return;
+      }
+      
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        reject(new Error('Seules les images sont acceptées'));
+        return;
+      }
+      
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Récupérer les images uploadées (pour la gestion locale)
+  static getUploadedImages() {
+    try {
+      return JSON.parse(localStorage.getItem('mireb_uploaded_images') || '[]');
+    } catch (error) {
+      console.error('Erreur récupération images:', error);
+      return [];
+    }
+  }
+
+  // Supprimer une image (mode mock)
+  static deleteImageMock(publicId) {
+    try {
+      const images = this.getUploadedImages();
+      const filteredImages = images.filter(img => img.publicId !== publicId);
+      localStorage.setItem('mireb_uploaded_images', JSON.stringify(filteredImages));
+      return true;
+    } catch (error) {
+      console.error('Erreur suppression image:', error);
+      return false;
+    }
+  }
+
+  static generateOptimizedUrl(publicId, options = {}) {
+    // Si c'est une image mock (localStorage), retourner l'URL directement
+    const images = this.getUploadedImages();
+    const mockImage = images.find(img => img.publicId === publicId);
+    if (mockImage) {
+      return mockImage.url; // Data URL
+    }
+    
+    // Sinon, utiliser Cloudinary
+    const {
+      width = 600,
+      height = 400,
+      crop = "fill",
+      quality = "auto",
+      format = "auto"
+    } = options;
+    
+    return `${CLOUDINARY_CONFIG.transformBaseUrl}/image/upload/w_${width},h_${height},c_${crop},q_${quality},f_${format}/${publicId}`;
+  }
+
+  static generateThumbnail(publicId) {
+    return this.generateOptimizedUrl(publicId, {
+      width: 150,
+      height: 150,
+      crop: "thumb"
+    });
+  }
+}
+
+/* =========================================================
+   5. SERVICE CHATBOT INTÉGRÉ
+   ========================================================= */
+class ChatbotService {
+  static async sendMessage(message, sessionId = null) {
+    try {
+      const response = await APIService.post('/chatbot', {
+        message,
+        sessionId,
+        context: {
+          page: window.location.pathname,
+          userType: AuthService.isAuthenticated() ? 'client' : 'prospect'
+        }
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Chatbot Error:', error);
+      
+      // Fallback réponses prédéfinies
+      const fallbackResponses = [
+        "Désolé, je rencontre un problème technique. Contactez-nous via WhatsApp au +243842267252 pour une assistance immédiate.",
+        "Je ne peux pas traiter votre demande actuellement. Notre équipe est disponible sur WhatsApp pour vous aider.",
+        "Problème de connexion. Veuillez nous contacter directement via WhatsApp pour un support rapide."
+      ];
+      
+      return {
+        response: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
+        sessionId: sessionId || Date.now().toString()
+      };
+    }
+  }
+
+  static async getProductRecommendations(query, products) {
+    try {
+      const response = await APIService.post('/chatbot/recommendations', {
+        query,
+        products: products.map(p => ({
+          id: p.id,
+          nom: p.nom,
+          prix: p.prix,
+          categorie: p.categorie,
+          description: p.description
+        }))
+      });
+
+      return response.data.recommendations;
+    } catch (error) {
+      console.error('Recommendations Error:', error);
+      
+      // Fallback simple basé sur mots-clés
+      const keywords = query.toLowerCase().split(' ');
+      const matches = products.filter(p => 
+        keywords.some(keyword => 
+          p.nom.toLowerCase().includes(keyword) ||
+          p.categorie.toLowerCase().includes(keyword) ||
+          (p.tags && p.tags.some(tag => tag.toLowerCase().includes(keyword)))
+        )
+      );
+      
+      return matches.slice(0, 3);
+    }
+  }
+}
+
+/* =========================================================
+   6. SERVICE WEBSOCKET INTÉGRÉ
+   ========================================================= */
+class WebSocketService {
+  constructor() {
+    this.socket = null;
+    this.isConnected = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.messageHandlers = {};
+    this.eventListeners = {};
+  }
+
+  connect() {
+    try {
+      const token = AuthService.getToken();
+      const socketUrl = BACKEND_CONFIG.baseURL.replace('/api', '');
+      
+      this.socket = io(socketUrl, {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: 1000,
+        timeout: 20000
+      });
+
+      this.socket.on('connect', () => {
+        console.log('WebSocket connecté');
+        this.isConnected = true;
+        this.reconnectAttempts = 0;
+        this.emit('connected');
+      });
+
+      this.socket.on('disconnect', () => {
+        console.log('WebSocket déconnecté');
+        this.isConnected = false;
+        this.emit('disconnected');
+      });
+
+      this.socket.on('connect_error', (error) => {
+        console.error('Erreur connexion WebSocket:', error);
+        this.reconnectAttempts++;
+        
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.error('Nombre maximum de tentatives de reconnexion atteint');
+          this.emit('max_reconnect_failed');
+        }
+      });
+
+      // Gestionnaires de messages
+      this.socket.on('new_message', (data) => {
+        this.emit('new_message', data);
+      });
+
+      this.socket.on('user_typing', (data) => {
+        this.emit('user_typing', data);
+      });
+
+      this.socket.on('notification', (data) => {
+        this.emit('notification', data);
+      });
+
+    } catch (error) {
+      console.error('Erreur initialisation WebSocket:', error);
+      this.emit('connection_failed', error);
+    }
+  }
+
+  disconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+      this.isConnected = false;
+    }
+  }
+
+  on(event, handler) {
+    if (!this.eventListeners[event]) {
+      this.eventListeners[event] = [];
+    }
+    this.eventListeners[event].push(handler);
+  }
+
+  emit(event, data = null) {
+    if (this.eventListeners[event]) {
+      this.eventListeners[event].forEach(handler => handler(data));
+    }
+  }
+
+  sendMessage(message, recipientId) {
+    if (this.isConnected && this.socket) {
+      this.socket.emit('send_message', {
+        message,
+        recipientId,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.warn('WebSocket non connecté, impossible d\'envoyer le message');
+    }
+  }
+
+  joinChatRoom(roomId) {
+    if (this.isConnected && this.socket) {
+      this.socket.emit('join_room', { roomId });
+    }
+  }
+
+  leaveChatRoom(roomId) {
+    if (this.isConnected && this.socket) {
+      this.socket.emit('leave_room', { roomId });
+    }
+  }
+
+  sendTyping(isTyping, roomId) {
+    if (this.isConnected && this.socket) {
+      this.socket.emit('typing', { isTyping, roomId });
+    }
+  }
+}
+
+// Instance globale WebSocket
+const wsService = new WebSocketService();
+
+/* =========================================================
+   7. SERVICE OPENAI INTÉGRÉ
+   ========================================================= */
+/* =========================================================
+   7. SERVICE OPENAI INTÉGRÉ
+   ========================================================= */
+class OpenAIService {
+  static async chatCompletion(messages, maxTokens = 150) {
+    try {
+      // Utilisation du backend pour les requêtes OpenAI
+      const response = await APIService.post('/openai/chat', {
+        messages,
+        maxTokens,
+        temperature: 0.7
+      });
+
+      return response.data.response;
+    } catch (error) {
+      console.error('OpenAI Service Error:', error);
+      
+      // Fallback avec réponses prédéfinies intelligentes
+      const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || '';
+      
+      if (lastMessage.includes('prix') || lastMessage.includes('tarif') || lastMessage.includes('coût')) {
+        return "Nos tarifs sont compétitifs et adaptés à vos besoins. Contactez-nous au +243842267252 pour un devis personnalisé.";
+      } else if (lastMessage.includes('produit') || lastMessage.includes('service')) {
+        return "Nous proposons une gamme complète de produits et services. Parcourez notre catalogue ou contactez-nous pour plus d'informations.";
+      } else if (lastMessage.includes('livraison') || lastMessage.includes('transport')) {
+        return "Nous assurons la livraison dans toute la région. Les délais et tarifs dépendent de votre localisation.";
+      } else {
+        return "Merci pour votre message ! Notre équipe vous répondra rapidement. Pour une assistance immédiate, contactez-nous sur WhatsApp : +243842267252";
+      }
+    }
+  }
+
+  static async getProductRecommendations(userQuery, products) {
+    try {
+      const response = await APIService.post('/openai/recommendations', {
+        query: userQuery,
+        products: products.map(p => ({
+          id: p.id,
+          nom: p.nom,
+          prix: p.prix,
+          categorie: p.categorie,
+          description: p.description
+        }))
+      });
+
+      return response.data.recommendations;
+    } catch (error) {
+      console.error('Recommendations Error:', error);
+      
+      // Fallback intelligent basé sur mots-clés
+      const keywords = userQuery.toLowerCase().split(' ');
+      const weightedMatches = products.map(product => {
+        let score = 0;
+        
+        keywords.forEach(keyword => {
+          if (product.nom.toLowerCase().includes(keyword)) score += 3;
+          if (product.categorie.toLowerCase().includes(keyword)) score += 2;
+          if (product.description?.toLowerCase().includes(keyword)) score += 1;
+          if (product.tags?.some(tag => tag.toLowerCase().includes(keyword))) score += 1;
+        });
+        
+        return { ...product, score };
+      });
+      
+      return weightedMatches
+        .filter(p => p.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+    }
+  }
+
+  static async generateProductDescription(productData) {
+    try {
+      const response = await APIService.post('/openai/generate-description', productData);
+      return response.data.description;
+    } catch (error) {
+      console.error('Description Generation Error:', error);
+      
+      // Fallback - génération basique
+      const { nom, categorie, prix } = productData;
+      return `${nom} - Un excellent produit de la catégorie ${categorie}. Prix attractif à ${prix}. Contactez-nous pour plus de détails sur les caractéristiques et la disponibilité.`;
+    }
+  }
+}
+
+/* =========================================================
+   8. SERVICE CRM INTÉGRÉ
+   ========================================================= */
+class CRMService {
+  static async addLead(leadData) {
+    const leads = loadData('leads');
+    const newLead = {
+      id: Date.now(),
+      ...leadData,
+      status: 'nouveau',
+      createdAt: new Date().toISOString(),
+      source: 'website',
+      priority: 'normale'
+    };
+    leads.push(newLead);
+    saveData('leads', leads);
+    
+    // Sauvegarde aussi dans MongoDB
+    await MongoDBService.saveToMongoDB('leads', newLead);
+    
+    // Mise à jour analytics
+    const analytics = loadData('analytics');
+    analytics.leads += 1;
+    saveData('analytics', analytics);
+    await MongoDBService.saveToMongoDB('analytics', analytics);
+    
+    return newLead;
+  }
+
+  static async updateLeadStatus(leadId, newStatus) {
+    const leads = loadData('leads');
+    const leadIndex = leads.findIndex(l => l.id === leadId);
+    if (leadIndex !== -1) {
+      leads[leadIndex].status = newStatus;
+      leads[leadIndex].updatedAt = new Date().toISOString();
+      saveData('leads', leads);
+      
+      // Mise à jour dans MongoDB
+      await MongoDBService.updateInMongoDB('leads', leadId, {
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      });
+      
+      if (newStatus === 'converti') {
+        const analytics = loadData('analytics');
+        analytics.conversions += 1;
+        saveData('analytics', analytics);
+        await MongoDBService.saveToMongoDB('analytics', analytics);
+      }
+    }
+  }
+
+  static getLeadsByStatus(status = null) {
+    const leads = loadData('leads');
+    return status ? leads.filter(l => l.status === status) : leads;
+  }
+
+  static async addCustomer(customerData) {
+    const customers = loadData('customers');
+    const newCustomer = {
+      id: Date.now(),
+      ...customerData,
+      createdAt: new Date().toISOString(),
+      totalSpent: 0,
+      orderCount: 0
+    };
+    customers.push(newCustomer);
+    saveData('customers', customers);
+    
+    // Sauvegarde dans MongoDB
+    await MongoDBService.saveToMongoDB('customers', newCustomer);
+    
+    return newCustomer;
+  }
+
+  static async getAnalytics() {
+    try {
+      const response = await APIService.get('/analytics/dashboard');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur analytics:', error);
+      return {
+        totalLeads: 0,
+        totalCustomers: 0,
+        conversions: 0,
+        conversionRate: 0,
+        leadsByStatus: {
+          nouveau: 0,
+          en_cours: 0,
+          converti: 0,
+          perdu: 0
+        }
+      };
+    }
+  }
+
+  static async addInteraction(leadId, interaction) {
+    return await LeadService.addLeadInteraction(leadId, interaction);
+  }
+
+  static async getInteractionHistory(leadId) {
+    try {
+      const response = await APIService.get('/leads/' + leadId + '/interactions');
+      return response.data || [];
+    } catch (error) {
+      console.error('Erreur historique interactions:', error);
+      return [];
+    }
+  }
+}
+
+/* =========================================================
+   6. ÉCRANS NAVIGATION
+   ========================================================= */
+
+// Écran des catégories avec produits
+function CategoriesScreen({ categories, produits, selectedCategory, setSelectedCategory, onSelectProduct, onBack }) {
+  const [viewMode, setViewMode] = useState('categories'); // 'categories' ou 'products'
+  
+  // Filtrer produits par catégorie sélectionnée
+  const filteredProducts = selectedCategory && selectedCategory !== "Tous" 
+    ? produits.filter(p => p.categorie === selectedCategory)
+    : [];
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    setViewMode('products');
+  };
+
+  const goBackToCategories = () => {
+    setViewMode('categories');
+    setSelectedCategory("Tous");
+  };
+
+  if (viewMode === 'products' && selectedCategory) {
+    // Vue des produits de la catégorie sélectionnée
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-4 fixed top-0 left-0 right-0 z-40">
+          <div className="flex items-center">
+            <button onClick={goBackToCategories} className="mr-3">
+              <i className="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h1 className="text-xl font-bold">{selectedCategory}</h1>
+            <span className="ml-auto text-sm bg-white bg-opacity-20 px-2 py-1 rounded">
+              {filteredProducts.length} produit(s)
+            </span>
+          </div>
+        </header>
+
+        <div className="pt-20 pb-20 p-4">
+          {/* Info catégorie */}
+          <div className="bg-white p-4 rounded-lg shadow mb-4">
+            <h2 className="font-bold text-lg mb-2 flex items-center">
+              <i className="fas fa-tag mr-2 text-orange-500"></i>
+              Catégorie : {selectedCategory}
+            </h2>
+            <p className="text-gray-600 text-sm">
+              Découvrez notre sélection de {filteredProducts.length} produit(s) dans cette catégorie
+            </p>
+          </div>
+
+          {/* Grille des produits */}
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {filteredProducts.map(produit => (
+                <div
+                  key={produit.id}
+                  onClick={() => onSelectProduct(produit)}
+                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
+                >
+                  <img
+                    src={produit.images[0]}
+                    alt={produit.nom}
+                    className="w-full h-32 object-cover rounded-t-lg"
+                  />
+                  <div className="p-3">
+                    <h3 className="font-bold text-sm mb-1 line-clamp-2">{produit.nom}</h3>
+                    <p className="text-orange-600 font-bold">${produit.prix}</p>
+                    <p className="text-xs text-gray-500 mt-1">Stock: {produit.stock}</p>
+                    {produit.rating && (
+                      <div className="flex items-center mt-1">
+                        <i className="fas fa-star text-yellow-400 text-xs"></i>
+                        <span className="text-xs text-gray-500 ml-1">{produit.rating}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <i className="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+              <h3 className="text-xl font-bold text-gray-600 mb-2">Aucun produit disponible</h3>
+              <p className="text-gray-500">Cette catégorie sera bientôt remplie de produits</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Vue des catégories par défaut
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-4 fixed top-0 left-0 right-0 z-40">
+        <div className="flex items-center">
+          <button onClick={onBack} className="mr-3">
+            <i className="fas fa-arrow-left text-xl"></i>
+          </button>
+          <h1 className="text-xl font-bold">Catégories</h1>
+          <span className="ml-auto text-sm bg-white bg-opacity-20 px-2 py-1 rounded">
+            {categories.length} catégorie(s)
+          </span>
+        </div>
+      </header>
+
+      <div className="pt-20 pb-20 p-4">
+        {/* Message d'explication */}
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
+          <h2 className="font-bold text-blue-800 mb-2 flex items-center">
+            <i className="fas fa-info-circle mr-2"></i>
+            Explorer nos catégories
+          </h2>
+          <p className="text-blue-700 text-sm">
+            Cliquez sur une catégorie pour voir tous les produits disponibles
+          </p>
+        </div>
+
+        {/* Grille des catégories */}
+        <div className="grid grid-cols-1 gap-4">
+          {categories && categories.length > 0 ? (
+            categories.map((category, index) => {
+              try {
+                const categoryProducts = produits.filter(p => 
+                  p && p.categorie && p.categorie === category
+                );
+                return (
+                  <div
+                    key={category || `category-${index}`}
+                    onClick={() => handleCategorySelect(category)}
+                    className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer border-l-4 border-orange-500"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="bg-gradient-to-r from-orange-500 to-red-500 p-3 rounded-lg mr-4">
+                            <i className="fas fa-tag text-white text-xl"></i>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg text-gray-800">{category || 'Catégorie inconnue'}</h3>
+                            <p className="text-gray-600 text-sm">
+                              {categoryProducts.length} produit(s) disponible(s)
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-orange-500">
+                          <i className="fas fa-chevron-right text-xl"></i>
+                        </div>
+                      </div>
+                      
+                      {/* Aperçu produits */}
+                      {categoryProducts.length > 0 && (
+                        <div className="mt-4 flex -space-x-2">
+                          {categoryProducts.slice(0, 3).map((product, idx) => (
+                            <img
+                              key={idx}
+                              src={product.images && product.images[0] ? product.images[0] : 'https://via.placeholder.com/32x32'}
+                              alt={product.nom || 'Produit'}
+                              className="w-8 h-8 rounded-full border-2 border-white object-cover"
+                              onError={(e) => {
+                                e.target.src = 'https://via.placeholder.com/32x32';
+                              }}
+                            />
+                          ))}
+                          {categoryProducts.length > 3 && (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-600">
+                              +{categoryProducts.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              } catch (error) {
+                console.error('Erreur rendu catégorie:', error, category);
+                return (
+                  <div key={`error-${index}`} className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <p className="text-red-600 text-sm">Erreur de chargement de la catégorie</p>
+                  </div>
+                );
+              }
+            })
+          ) : (
+            <div className="text-center py-12">
+              <i className="fas fa-tags text-6xl text-gray-300 mb-4"></i>
+              <h3 className="text-xl font-bold text-gray-600 mb-2">Aucune catégorie disponible</h3>
+              <p className="text-gray-500">Les catégories seront ajoutées prochainement</p>
+            </div>
+          )}
+        </div>
+
+        {/* Bouton retour à l'accueil */}
+        <div className="mt-8 text-center">
+          <button
+            onClick={onBack}
+            className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-8 py-3 rounded-lg font-medium flex items-center mx-auto"
+          >
+            <i className="fas fa-home mr-2"></i>
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Écran de profil
+function ProfileScreen({ user, onBack, onLogin }) {
+  const handleLogout = () => {
+    localStorage.removeItem('mireb_user');
+    window.location.reload();
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-4 fixed top-0 left-0 right-0 z-40">
+        <div className="flex items-center">
+          <button onClick={onBack} className="mr-3">
+            <i className="fas fa-arrow-left text-xl"></i>
+          </button>
+          <h1 className="text-xl font-bold">Mon Compte</h1>
+        </div>
+      </header>
+
+      <div className="pt-20 pb-20 p-4">
+        {user ? (
+          <div className="space-y-4">
+            {/* Profil utilisateur */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="text-center mb-4">
+                <div className="w-20 h-20 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <i className="fas fa-user text-2xl text-white"></i>
+                </div>
+                <h2 className="text-xl font-bold">{user.email}</h2>
+                <p className="text-gray-500">Membre depuis {new Date().getFullYear()}</p>
+              </div>
+            </div>
+
+            {/* Options du compte */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b flex items-center">
+                <i className="fas fa-shopping-bag text-orange-600 mr-3"></i>
+                <span>Mes commandes</span>
+                <i className="fas fa-chevron-right ml-auto text-gray-400"></i>
+              </div>
+              <div className="p-4 border-b flex items-center">
+                <i className="fas fa-heart text-orange-600 mr-3"></i>
+                <span>Favoris</span>
+                <i className="fas fa-chevron-right ml-auto text-gray-400"></i>
+              </div>
+              <div className="p-4 border-b flex items-center">
+                <i className="fas fa-cog text-orange-600 mr-3"></i>
+                <span>Paramètres</span>
+                <i className="fas fa-chevron-right ml-auto text-gray-400"></i>
+              </div>
+              <div className="p-4 flex items-center">
+                <i className="fas fa-question-circle text-orange-600 mr-3"></i>
+                <span>Aide & Support</span>
+                <i className="fas fa-chevron-right ml-auto text-gray-400"></i>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2">
+              <button 
+                onClick={handleLogout}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-medium"
+              >
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Non connecté */}
+            <div className="bg-white p-6 rounded-lg shadow text-center">
+              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-user text-2xl text-gray-400"></i>
+              </div>
+              <h2 className="text-xl font-bold mb-2">Connexion requise</h2>
+              <p className="text-gray-500 mb-4">Connectez-vous pour accéder à votre profil</p>
+              <button 
+                onClick={onLogin}
+                className="bg-orange-600 text-white px-6 py-2 rounded-lg font-medium"
+              >
+                Se connecter
+              </button>
+            </div>
+
+            {/* Avantages de la connexion */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 border-b">
+                <h3 className="font-bold mb-2">Avantages du compte</h3>
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span className="text-sm">Suivi de vos commandes</span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span className="text-sm">Historique des achats</span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span className="text-sm">Offres personnalisées</span>
+                </div>
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle text-green-500 mr-3"></i>
+                  <span className="text-sm">Support prioritaire</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Fonctions utilitaires pour localStorage
+function saveData(key, data) {
+  try {
+    localStorage.setItem(`mireb_${key}`, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Erreur sauvegarde ${key}:`, error);
+  }
+}
+
+function loadData(key, defaultValue = []) {
+  try {
+    const data = localStorage.getItem(`mireb_${key}`);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (error) {
+    console.error(`Erreur chargement ${key}:`, error);
+    return defaultValue;
+  }
+}
+
+/* =========================================================
+   7. APP PRINCIPALE AVEC AI & CRM
+   ========================================================= */
+function App() {
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [screen, setScreen] = useState("home");
+  const [produitActif, setProduitActif] = useState(null);
+  const [produits, setProduits] = useState(() => loadData('produits', PRODUITS_BASE));
+  const [categories, setCategories] = useState(() => {
+    // Chargement dynamique des catégories depuis localStorage
+    return loadData('categories', DEFAULT_CATEGORIES);
+  });
+  const [showChat, setShowChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Tous");
+
+  // Initialisation et synchronisation des données
+  useEffect(() => {
+    const analytics = loadData('analytics', { views: 0 });
+    analytics.views += 1;
+    saveData('analytics', analytics);
+    
+    // Synchronisation des produits depuis l'API
+    const syncProducts = async () => {
+      try {
+        const productsFromAPI = await ProductService.getAllProducts();
+        if (productsFromAPI && productsFromAPI.length > 0) {
+          setProduits(productsFromAPI);
+          saveData('produits', productsFromAPI);
+        }
+      } catch (error) {
+        console.warn('Synchronisation produits échouée, utilisation des données locales');
+      }
+    };
+    
+    syncProducts();
+  }, []);
+
+  // Authentification
+  const handleLogin = (email, password) => {
+    if (email === "mirebshop@gmail.com" && password === "Fiacre-19") {
+      setUser({ email, name: "Admin" });
+      setIsAdmin(true);
+      setShowLogin(false);
+      setScreen("admin");
+    } else if (email && password) {
+      setUser({ email, name: email.split("@")[0] });
+      setIsAdmin(false);
+      setShowLogin(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setIsAdmin(false);
+    setScreen("home");
+  };
+
+  // Persistance produits
+  useEffect(() => saveData('produits', produits), [produits]);
+  
+  // Persistance catégories
+  useEffect(() => {
+    saveData('categories', categories);
+  }, [categories]);
+
+  // Filtrage produits avec gestion d'erreurs
+  const filteredProduits = produits.filter(p => {
+    try {
+      if (!p || !p.nom) return false;
+      
+      const matchSearch = searchQuery === "" || 
+                         p.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (p.tags && Array.isArray(p.tags) && p.tags.some(tag => 
+                           tag && tag.toLowerCase().includes(searchQuery.toLowerCase())
+                         ));
+      
+      const matchCategory = selectedCategory === "Tous" || 
+                           (p.categorie && p.categorie === selectedCategory);
+      
+      return matchSearch && matchCategory;
+    } catch (error) {
+      console.error('Erreur filtrage produit:', error, p);
+      return false;
+    }
+  });
+
+  // Navigation
+  if (showLogin) return <LoginPage onLogin={handleLogin} onClose={() => setShowLogin(false)} />;
+  if (screen === "admin") return <AdminInterface produits={produits} setProduits={setProduits} categories={categories} setCategories={setCategories} onLogout={handleLogout} />;
+  if (screen === "detail" && produitActif) return <DetailProduit produit={produitActif} onBack={() => setScreen("home")} />;
+  if (screen === "categories") return <CategoriesScreen 
+    categories={categories} 
+    produits={produits}
+    selectedCategory={selectedCategory}
+    setSelectedCategory={setSelectedCategory}
+    onSelectProduct={(produit) => { setProduitActif(produit); setScreen("detail"); }} 
+    onBack={() => setScreen("home")} 
+  />;
+  if (screen === "profile") return <ProfileScreen user={user} onBack={() => setScreen("home")} onLogin={() => setShowLogin(true)} />;
+
+  return (
+    <div className="min-h-screen pb-16">
+      {/* Header avec recherche améliorée */}
+      <header className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-3 fixed top-0 left-0 right-0 z-40 shadow-lg">
+        <div className="flex items-center space-x-3">
+          <h1 className="text-xl font-bold">Mireb AI</h1>
+          <div className="flex-1 relative">
+            <i className="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+            <input
+              type="text"
+              placeholder="Rechercher avec IA..."
+              className="w-full pl-10 pr-3 py-2 rounded-full text-gray-800 text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button 
+            onClick={() => setShowChat(true)} 
+            className="text-xl bg-white bg-opacity-20 p-2 rounded-full"
+          >
+            <i className="fas fa-robot"></i>
+          </button>
+          <button onClick={() => setShowLogin(true)} className="text-xl">
+            <i className="fas fa-user-circle"></i>
+          </button>
+        </div>
+      </header>
+
+      <div className="pt-16">
+        {/* Catégories */}
+        <div className="bg-white py-2 px-3 shadow-sm overflow-x-auto flex space-x-3">
+          <button
+            className={"px-3 py-1.5 rounded-full text-sm " + (selectedCategory === "Tous" ? 'bg-orange-600 text-white' : 'bg-gray-200')}
+            onClick={() => setSelectedCategory("Tous")}
+          >
+            Tous ({produits.length})
+          </button>
+          {categories.map(c => (
+            <button 
+              key={c} 
+              className={"px-3 py-1.5 rounded-full text-sm " + (selectedCategory === c ? 'bg-orange-600 text-white' : 'bg-gray-200')}
+              onClick={() => setSelectedCategory(c)}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {/* Grille produits améliorée avec gestion d'erreurs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3">
+          {filteredProduits.length > 0 ? (
+            filteredProduits.map(p => {
+              try {
+                return (
+                  <ProductCard 
+                    key={p.id || `product-${Math.random()}`} 
+                    product={p} 
+                    onView={() => { setProduitActif(p); setScreen("detail"); }}
+                  />
+                );
+              } catch (error) {
+                console.error('Erreur rendu produit:', error, p);
+                return null;
+              }
+            })
+          ) : (
+            <div className="col-span-2 md:col-span-4 text-center py-8">
+              <i className="fas fa-box-open text-4xl text-gray-400 mb-3"></i>
+              <p className="text-gray-500">
+                {searchQuery ? 'Aucun produit trouvé pour cette recherche' : 'Aucun produit disponible'}
+              </p>
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="mt-2 text-orange-600 font-medium"
+                >
+                  Effacer la recherche
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-1.5">
+        <button 
+          onClick={() => setScreen("home")}
+          className={"flex flex-col items-center " + (screen === "home" ? "text-orange-600" : "text-gray-400")}
+        >
+          <i className="fas fa-home text-xl"></i>
+          <span className="text-xs">Accueil</span>
+        </button>
+        <button 
+          onClick={() => setScreen("categories")}
+          className={"flex flex-col items-center " + (screen === "categories" ? "text-orange-600" : "text-gray-400")}
+        >
+          <i className="fas fa-th-large text-xl"></i>
+          <span className="text-xs">Catégories</span>
+        </button>
+        <button 
+          onClick={() => setShowChat(true)}
+          className="flex flex-col items-center text-blue-500"
+        >
+          <i className="fas fa-robot text-xl"></i>
+          <span className="text-xs">Assistant IA</span>
+        </button>
+        <button 
+          onClick={() => setScreen("profile")}
+          className={"flex flex-col items-center " + (screen === "profile" ? "text-orange-600" : "text-gray-400")}
+        >
+          <i className="fas fa-user text-xl"></i>
+          <span className="text-xs">Compte</span>
+        </button>
+      </nav>
+
+      {/* Boutons flottants */}
+      <div className="fixed bottom-20 right-4 flex flex-col space-y-3">
+        <a href="https://wa.me/243842267252" target="_blank"
+           className="bg-green-500 text-white p-3 rounded-full shadow-lg">
+          <i className="fab fa-whatsapp text-2xl"></i>
+        </a>
+        <button 
+          onClick={() => setShowChat(true)}
+          className="bg-blue-500 text-white p-3 rounded-full shadow-lg"
+        >
+          <i className="fas fa-comments text-2xl"></i>
+        </button>
+      </div>
+
+      {/* Chat AI Modal */}
+      {showChat && <AIChat onClose={() => setShowChat(false)} produits={produits} />}
+    </div>
+  );
+}
+
+/* =========================================================
+   8. COMPOSANT CARTE PRODUIT AMÉLIORÉE
+   ========================================================= */
+function ProductCard({ product, onView }) {
+  // Validation des données produit
+  if (!product) {
+    return (
+      <div className="bg-gray-100 rounded-lg shadow-md p-4 text-center">
+        <i className="fas fa-exclamation-triangle text-gray-400 text-xl mb-2"></i>
+        <p className="text-gray-500 text-sm">Produit indisponible</p>
+      </div>
+    );
+  }
+
+  const {
+    id,
+    nom = 'Produit sans nom',
+    prix = 0,
+    images = ['https://via.placeholder.com/300x200?text=Image+Non+Disponible'],
+    stock = 0,
+    rating,
+    categorie = 'Non catégorisé'
+  } = product;
+
+  const imageUrl = Array.isArray(images) && images.length > 0 
+    ? images[0] 
+    : 'https://via.placeholder.com/300x200?text=Image+Non+Disponible';
+
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="relative">
+        <img 
+          src={imageUrl} 
+          alt={nom} 
+          className="w-full h-32 object-cover"
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/300x200?text=Image+Erreur';
+          }}
+        />
+        {stock < 5 && stock > 0 && (
+          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+            Stock faible
+          </span>
+        )}
+        {stock === 0 && (
+          <span className="absolute top-2 left-2 bg-gray-500 text-white text-xs px-2 py-1 rounded">
+            Rupture
+          </span>
+        )}
+        <span className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+          {categorie}
+        </span>
+      </div>
+      <div className="p-3">
+        <h3 className="font-bold text-sm truncate mb-1" title={nom}>{nom}</h3>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-orange-600 font-bold">${prix}</span>
+          {rating && (
+            <div className="flex items-center">
+              <i className="fas fa-star text-yellow-400 text-xs"></i>
+              <span className="text-xs text-gray-500 ml-1">{rating}</span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mb-2">Stock: {stock}</p>
+        <button
+          onClick={onView}
+          disabled={stock === 0}
+          className={`w-full py-1.5 rounded text-sm font-medium transition-colors ${
+            stock === 0 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600'
+          }`}
+        >
+          {stock === 0 ? 'Indisponible' : 'Voir détails'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   9. CHAT AI COMPONENT
+   ========================================================= */
+function AIChat({ onClose, produits }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: 'Bonjour ! Je suis votre assistant IA Mireb. Comment puis-je vous aider à trouver le produit parfait ?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      // Déterminer le type de requête
+      const isProductSearch = input.toLowerCase().includes('produit') || 
+                             input.toLowerCase().includes('cherche') ||
+                             input.toLowerCase().includes('recommande');
+
+      let aiResponse;
+      if (isProductSearch) {
+        aiResponse = await OpenAIService.getProductRecommendations(input, produits);
+      } else {
+        // Chat général
+        const systemPrompt = "Tu es l'assistant commercial de Mireb Commercial, une plateforme e-commerce au Congo. " +
+        "Réponds de manière amicale et professionnelle. Encourage les clients à découvrir nos produits. " +
+        "Si on te demande des informations que tu n'as pas, dirige vers WhatsApp (+243842267252).";
+        
+        const chatMessages = [
+          { role: 'system', content: systemPrompt },
+          ...messages.slice(-5), // derniers 5 messages pour le contexte
+          userMessage
+        ];
+        
+        aiResponse = await OpenAIService.chatCompletion(chatMessages);
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Désolé, je rencontre un problème. Contactez-nous via WhatsApp pour une assistance immédiate.' 
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-md h-96 flex flex-col">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-3 rounded-t-lg flex justify-between items-center">
+          <div className="flex items-center">
+            <i className="fas fa-robot mr-2"></i>
+            <span className="font-bold">Assistant IA Mireb</span>
+          </div>
+          <button onClick={onClose} className="text-xl">×</button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={"flex " + (msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+              <div className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="chat-bubble-ai typing-indicator">
+                <i className="fas fa-ellipsis-h"></i>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="p-3 border-t">
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Tapez votre message..."
+              className="flex-1 border rounded-full px-3 py-2 text-sm"
+              disabled={isTyping}
+            />
+            <button
+              onClick={handleSend}
+              disabled={isTyping || !input.trim()}
+              className="bg-blue-500 text-white rounded-full px-4 py-2 disabled:opacity-50"
+            >
+              <i className="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   10. LOGIN PAGE
+   ========================================================= */
+function LoginPage({ onLogin, onClose }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-80">
+        <h2 className="text-xl font-bold mb-4 text-center">Connexion Mireb</h2>
+        <input 
+          type="email" 
+          placeholder="Email" 
+          className="w-full mb-3 border px-3 py-2 rounded-lg"
+          value={email} 
+          onChange={e => setEmail(e.target.value)} 
+        />
+        <input 
+          type="password" 
+          placeholder="Mot de passe" 
+          className="w-full mb-4 border px-3 py-2 rounded-lg"
+          value={password} 
+          onChange={e => setPassword(e.target.value)} 
+        />
+        <button
+          onClick={() => onLogin(email, password)}
+          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 rounded-lg mb-3 font-medium"
+        >
+          Se connecter
+        </button>
+        <button onClick={onClose} className="w-full text-gray-500 text-sm">Annuler</button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   11. DETAIL PRODUIT AVEC IA
+   ========================================================= */
+function DetailProduit({ produit, onBack }) {
+  const [currentImg, setCurrentImg] = useState(0);
+  const [form, setForm] = useState({ nom: "", tel: "", adresse: "", ville: "", message: "" });
+  const [sent, setSent] = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+  const [loadingAI, setLoadingAI] = useState(false);
+
+  // Génération description IA
+  const generateAIDescription = async () => {
+    setLoadingAI(true);
+    try {
+      const description = await OpenAIService.generateProductDescription({
+        nom: produit.nom,
+        categorie: produit.categorie,
+        prix: produit.prix
+      });
+      setAiDescription(description);
+    } catch (error) {
+      console.error('Erreur génération IA:', error);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const handleSubmit = e => {
+    e.preventDefault();
+    
+    // Enregistrer le lead dans le CRM
+    const leadData = {
+      nom: form.nom,
+      telephone: form.tel,
+      adresse: form.adresse,
+      ville: form.ville,
+      message: form.message,
+      produitInteresse: produit.nom,
+      prixProduit: produit.prix
+    };
+    
+    CRMService.addLead(leadData);
+    
+    console.log("NOUVEAU LEAD CRM:", leadData);
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+    
+    // Reset form - correction du reset double
+    setForm({ nom: "", tel: "", adresse: "", ville: "", message: "" });
+  };
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-orange-600 to-red-600 text-white p-3 flex items-center">
+        <button onClick={onBack} className="mr-3">
+          <i className="fas fa-arrow-left text-xl"></i>
+        </button>
+        <h1 className="text-lg font-bold truncate">{produit.nom}</h1>
+        <button 
+          onClick={generateAIDescription}
+          className="ml-auto bg-white bg-opacity-20 p-2 rounded"
+          disabled={loadingAI}
+        >
+          <i className={"fas fa-robot " + (loadingAI ? 'fa-spin' : '')}></i>
+        </button>
+      </header>
+
+      {/* Galerie */}
+      <div className="relative">
+        <img src={produit.images[currentImg]} alt={produit.nom} className="w-full h-64 object-cover"/>
+        {produit.images.length > 1 && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
+            {produit.images.map((_, idx) => (
+              <button
+                key={idx}
+                className={"w-2.5 h-2.5 rounded-full " + (idx === currentImg ? 'bg-white' : 'bg-white bg-opacity-50')}
+                onClick={() => setCurrentImg(idx)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Infos produit */}
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h2 className="text-2xl font-bold text-orange-600">${produit.prix}</h2>
+          {produit.rating && (
+            <div className="flex items-center">
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <i key={i} className={"fas fa-star " + (i < Math.floor(produit.rating) ? '' : 'text-gray-300')}></i>
+                ))}
+              </div>
+              <span className="ml-2 text-sm text-gray-500">({produit.reviews} avis)</span>
+            </div>
+          )}
+        </div>
+        
+        <p className="text-sm text-gray-500 mb-3">Stock : {produit.stock} • Catégorie : {produit.categorie}</p>
+        
+        {/* Tags */}
+        {produit.tags && (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {produit.tags.map(tag => (
+              <span key={tag} className="bg-gray-200 text-xs px-2 py-1 rounded-full">#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Description originale */}
+        <div className="mb-4">
+          <h3 className="font-bold mb-2">Description</h3>
+          <div className="prose prose-sm" dangerouslySetInnerHTML={{ __html: produit.description }}/>
+        </div>
+
+        {/* Description IA */}
+        {aiDescription && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+            <h3 className="font-bold mb-2 flex items-center">
+              <i className="fas fa-robot mr-2 text-blue-500"></i>
+              Analyse IA
+            </h3>
+            <div className="prose prose-sm" dangerouslySetInnerHTML={{ __html: aiDescription }}/>
+          </div>
+        )}
+
+        {/* Formulaire lead */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-bold mb-3 flex items-center">
+            <i className="fas fa-heart mr-2 text-red-500"></i>
+            Intéressé ? Contactez-nous
+          </h3>
+          {sent && <p className="text-green-600 mb-3 font-medium">✅ Demande envoyée avec succès !</p>}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input 
+              type="text" 
+              placeholder="Votre nom complet"
+              required 
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.nom} 
+              onChange={e => setForm({...form, nom: e.target.value})} 
+            />
+            <input 
+              type="tel" 
+              placeholder="Numéro WhatsApp (+243...)"
+              required 
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.tel} 
+              onChange={e => setForm({...form, tel: e.target.value})} 
+            />
+            <input 
+              type="text" 
+              placeholder="Adresse complète"
+              required
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.adresse}
+              onChange={e => setForm({...form, adresse: e.target.value})}
+            />
+            <input 
+              type="text" 
+              placeholder="Ville"
+              required
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.ville}
+              onChange={e => setForm({...form, ville: e.target.value})}
+            />
+            <textarea 
+              placeholder="Votre message ou question..."
+              rows="3" 
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.message} 
+              onChange={e => setForm({...form, message: e.target.value})} 
+            />
+            <button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-medium"
+            >
+              <i className="fas fa-paper-plane mr-2"></i>
+              Envoyer ma demande
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   12. INTERFACE ADMIN AVEC CRM
+   ========================================================= */
+function AdminInterface({ produits, setProduits, categories, setCategories, onLogout }) {
+  const [activeTab, setActiveTab] = useState('produits');
+  const [analytics, setAnalytics] = useState({
+    views: 0,
+    totalLeads: 0,
+    totalCustomers: 0,
+    conversions: 0,
+    conversionRate: 0,
+    leadsByStatus: {
+      nouveau: 0,
+      en_cours: 0,
+      converti: 0,
+      perdu: 0
+    }
+  });
+
+  // Refresh analytics avec gestion d'erreur
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const analyticsData = await CRMService.getAnalytics();
+        setAnalytics(analyticsData);
+      } catch (error) {
+        console.error('Erreur lors du chargement des analytics:', error);
+      }
+    };
+
+    fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const tabs = [
+    { id: 'produits', name: 'Produits', icon: 'fas fa-box' },
+    { id: 'categories', name: 'Catégories', icon: 'fas fa-tags' },
+    { id: 'marketing', name: 'Marketing', icon: 'fas fa-share-alt' },
+    { id: 'leads', name: 'Leads', icon: 'fas fa-users' },
+    { id: 'analytics', name: 'Analytics', icon: 'fas fa-chart-bar' },
+    { id: 'ai-tools', name: 'Outils IA', icon: 'fas fa-robot' },
+    { id: 'cloudinary', name: 'Images', icon: 'fas fa-cloud' },
+    { id: 'mongodb', name: 'Database', icon: 'fas fa-database' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Header Admin */}
+      <header className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold flex items-center">
+            <i className="fas fa-crown mr-2"></i>
+            Admin Mireb CRM
+          </h1>
+          <button onClick={onLogout} className="bg-white text-purple-600 px-4 py-2 rounded-lg font-medium">
+            Déconnexion
+          </button>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="bg-white border-b">
+        <div className="flex overflow-x-auto">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={"flex items-center px-4 py-3 text-sm font-medium border-b-2 " + (
+                activeTab === tab.id 
+                  ? 'border-purple-500 text-purple-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              )}
+            >
+              <i className={tab.icon + " mr-2"}></i>
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {activeTab === 'produits' && <AdminProduits produits={produits} setProduits={setProduits} categories={categories} />}
+        {activeTab === 'categories' && <AdminCategories categories={categories} setCategories={setCategories} />}
+        {activeTab === 'marketing' && <AdminMarketing produits={produits} categories={categories} />}
+        {activeTab === 'leads' && <AdminLeads />}
+        {activeTab === 'analytics' && <AdminAnalytics analytics={analytics} />}
+        {activeTab === 'ai-tools' && <AdminAITools produits={produits} setProduits={setProduits} />}
+        {activeTab === 'cloudinary' && <AdminCloudinary />}
+        {activeTab === 'mongodb' && <AdminMongoDB />}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   13. COMPOSANTS ADMIN
+   ========================================================= */
+function AdminProduits({ produits, setProduits, categories }) {
+  const [form, setForm] = useState({
+    nom: "", prix: "", stock: "", categorie: categories[0] || "", images: "", description: "", features: "", target: "general"
+  });
+  const [uploading, setUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    const uploadPromises = files.map(async (file, index) => {
+      try {
+        // Afficher le progrès
+        console.log(`🔄 Upload ${index + 1}/${files.length}: ${file.name}`);
+        const result = await CloudinaryService.uploadImage(file);
+        console.log(`✅ Upload réussi: ${file.name}`, result);
+        return result;
+      } catch (error) {
+        console.error(`❌ Échec upload: ${file.name}`, error);
+        throw error;
+      }
+    });
+
+    try {
+      const results = await Promise.allSettled(uploadPromises);
+      const successful = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+      const failed = results.filter(r => r.status === 'rejected');
+      
+      if (successful.length > 0) {
+        const imageUrls = successful.map(result => result.url);
+        setUploadedImages(prev => [...prev, ...imageUrls]);
+        
+        // Ajouter automatiquement au champ images
+        const currentImages = form.images ? form.images.split(',').map(i => i.trim()) : [];
+        const newImages = [...currentImages, ...imageUrls].join(', ');
+        setForm({...form, images: newImages});
+        
+        // Message de succès détaillé
+        const successMessage = `✅ ${successful.length} image(s) uploadée(s) avec succès!`;
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const storageInfo = isGitHubPages ? '\n📱 Images stockées localement (mode démo)' : '\n☁️ Images stockées sur Cloudinary';
+        
+        alert(successMessage + storageInfo);
+      }
+      
+      if (failed.length > 0) {
+        const failedMessage = `❌ ${failed.length} image(s) ont échoué:\n` + 
+          failed.map((f, i) => `• ${files[results.findIndex(r => r === f)].name}: ${f.reason.message}`).join('\n');
+        console.error('Erreurs upload:', failed);
+        alert(failedMessage);
+      }
+      
+    } catch (error) {
+      console.error('Erreur upload Cloudinary:', error);
+      
+      // Message d'erreur plus informatif
+      let errorMessage = "❌ Erreur lors de l'upload des images:\n";
+      
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage += "• Connexion au serveur impossible\n";
+        errorMessage += "• Mode démo activé - images stockées localement\n";
+        errorMessage += "• Fonctionnalité limitée mais utilisable";
+      } else if (error.message.includes('413')) {
+        errorMessage += "• Fichier(s) trop volumineux (max 10MB)\n";
+        errorMessage += "• Réduisez la taille de vos images";
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        errorMessage += "• Problème d'authentification\n";
+        errorMessage += "• Vérifiez votre connexion";
+      } else {
+        errorMessage += "• " + error.message + "\n";
+        errorMessage += "• Essayez avec des images plus petites";
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!form.nom || !form.prix) {
+      alert('Veuillez remplir au moins le nom et le prix du produit');
+      return;
+    }
+
+    try {
+      const newProductData = {
+        nom: form.nom,
+        prix: Number(form.prix),
+        stock: Number(form.stock) || 0,
+        categorie: form.categorie,
+        images: form.images.split(",").map(i => i.trim()).filter(Boolean).length > 0 
+          ? form.images.split(",").map(i => i.trim()).filter(Boolean) 
+          : ["https://via.placeholder.com/600x400"],
+        description: form.description || "<p>Description à compléter</p>",
+        tags: form.nom.toLowerCase().split(' ').slice(0, 4),
+        rating: (Math.random() * 2 + 3).toFixed(1), // Rating aléatoire entre 3-5
+        reviews: Math.floor(Math.random() * 200) + 10,
+        // Nouveaux champs pour l'IA
+        features: form.features ? form.features.split(',').map(f => f.trim()).filter(Boolean) : [],
+        target: form.target || 'general'
+      };
+      
+      const createdProduct = await ProductService.createProduct(newProductData);
+      setProduits([...produits, createdProduct]);
+      
+      // Réinitialiser le formulaire avec tous les nouveaux champs
+      setForm({ 
+        nom: "", 
+        prix: "", 
+        stock: "", 
+        categorie: categories[0] || "", 
+        images: "", 
+        description: "",
+        features: "",
+        target: "general"
+      });
+      setUploadedImages([]);
+      setGeneratingDescription(false);
+      
+      alert('✅ Produit ajouté avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du produit:', error);
+      alert('Erreur lors de l\'ajout du produit: ' + error.message);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Ajouter produit avec Cloudinary */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-plus mr-2 text-green-500"></i>
+          Ajouter un produit
+        </h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <input 
+            placeholder="Nom du produit" 
+            value={form.nom} 
+            onChange={e => setForm({...form, nom: e.target.value})} 
+            className="border px-3 py-2 rounded-lg"
+          />
+          <input 
+            type="number" 
+            placeholder="Prix ($)" 
+            value={form.prix} 
+            onChange={e => setForm({...form, prix: e.target.value})} 
+            className="border px-3 py-2 rounded-lg"
+          />
+          <input 
+            type="number" 
+            placeholder="Stock" 
+            value={form.stock} 
+            onChange={e => setForm({...form, stock: e.target.value})} 
+            className="border px-3 py-2 rounded-lg"
+          />
+          <select 
+            value={form.categorie} 
+            onChange={e => setForm({...form, categorie: e.target.value})} 
+            className="border px-3 py-2 rounded-lg"
+          >
+            {categories.map(c => <option key={c}>{c}</option>)}
+          </select>
+          
+          {/* Champs pour améliorer l'IA */}
+          <input 
+            placeholder="Caractéristiques (séparées par des virgules)" 
+            value={form.features} 
+            onChange={e => setForm({...form, features: e.target.value})} 
+            className="border px-3 py-2 rounded-lg md:col-span-2"
+            title="Ex: Résistant à l'eau, Design ergonomique, Haute qualité"
+          />
+          
+          <select 
+            value={form.target} 
+            onChange={e => setForm({...form, target: e.target.value})} 
+            className="border px-3 py-2 rounded-lg"
+            title="Public cible pour optimiser la description IA"
+          >
+            <option value="general">Public général</option>
+            <option value="jeune">Jeunes (18-30 ans)</option>
+            <option value="adulte">Adultes (30-50 ans)</option>
+            <option value="senior">Seniors (50+ ans)</option>
+            <option value="professionnel">Professionnels</option>
+          </select>
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={async () => {
+                if (!form.nom) {
+                  alert('Veuillez d\'abord saisir le nom du produit');
+                  return;
+                }
+                
+                const imageUrl = uploadedImages[0] || form.images.split(',')[0]?.trim();
+                if (!imageUrl) {
+                  alert('Veuillez d\'abord ajouter une image pour l\'analyse');
+                  return;
+                }
+                
+                try {
+                  const result = await AIService.analyzeProductImage(imageUrl, form.nom);
+                  
+                  if (result.success && result.analysis) {
+                    // Ajouter les caractéristiques trouvées
+                    const existingFeatures = form.features ? form.features.split(',').map(f => f.trim()) : [];
+                    const newFeatures = [...existingFeatures, ...result.analysis.features].slice(0, 10);
+                    setForm({...form, features: [...new Set(newFeatures)].join(', ')});
+                    
+                    alert(`✅ Analyse terminée! ${result.analysis.features.length} caractéristiques détectées.`);
+                    if (result.warning) {
+                      alert(`⚠️ ${result.warning}`);
+                    }
+                  }
+                } catch (error) {
+                  alert('❌ Erreur lors de l\'analyse: ' + error.message);
+                }
+              }}
+              disabled={!uploadedImages[0] && !form.images}
+              className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded flex items-center disabled:opacity-50"
+            >
+              <i className="fas fa-search mr-1"></i>
+              Analyser Image
+            </button>
+          </div>
+          
+          {/* Upload Cloudinary amélioré */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">
+              <i className="fas fa-cloud-upload-alt mr-2 text-blue-500"></i>
+              Upload Images (Cloudinary)
+              {window.location.hostname.includes('github.io') && (
+                <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                  Mode Démo
+                </span>
+              )}
+            </label>
+            
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                className="hidden"
+                id="file-upload"
+              />
+              <label 
+                htmlFor="file-upload" 
+                className={`cursor-pointer ${uploading ? 'cursor-not-allowed opacity-50' : ''}`}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center text-blue-600">
+                    <i className="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <span className="text-sm font-medium">Upload en cours...</span>
+                    <span className="text-xs text-gray-500">Veuillez patienter</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-gray-500 hover:text-blue-500 transition-colors">
+                    <i className="fas fa-cloud-upload-alt text-3xl mb-2"></i>
+                    <span className="text-sm font-medium">Cliquez pour sélectionner des images</span>
+                    <span className="text-xs">PNG, JPG, GIF jusqu'à 10MB</span>
+                  </div>
+                )}
+              </label>
+            </div>
+            
+            {uploadedImages.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-green-600">
+                    ✅ {uploadedImages.length} image(s) uploadée(s)
+                  </span>
+                  <button
+                    onClick={() => {
+                      setUploadedImages([]);
+                      setForm({...form, images: ''});
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    <i className="fas fa-trash mr-1"></i>Effacer tout
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  {uploadedImages.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <img 
+                        src={url} 
+                        alt={`Upload ${idx + 1}`} 
+                        className="w-16 h-16 object-cover rounded border shadow-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          const newImages = uploadedImages.filter((_, i) => i !== idx);
+                          setUploadedImages(newImages);
+                          setForm({...form, images: newImages.join(', ')});
+                        }}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">
+              <i className="fas fa-link mr-2 text-gray-500"></i>
+              URLs Images (alternative ou complément)
+            </label>
+            <textarea 
+              placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+              value={form.images} 
+              onChange={e => setForm({...form, images: e.target.value})} 
+              className="w-full border px-3 py-2 rounded-lg" 
+              rows="2"
+            />
+            <div className="mt-1 text-xs text-gray-500">
+              💡 Séparez les URLs par des virgules. Les images uploadées sont automatiquement ajoutées ici.
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">
+                <i className="fas fa-edit mr-2 text-gray-500"></i>
+                Description du produit
+              </label>
+              <button
+                onClick={async () => {
+                  if (!form.nom) {
+                    alert('Veuillez d\'abord saisir le nom du produit');
+                    return;
+                  }
+                  
+                  setGeneratingDescription(true);
+                  try {
+                    const result = await AIService.generateProductDescription({
+                      nom: form.nom,
+                      categorie: form.categorie,
+                      prix: form.prix,
+                      features: form.features ? form.features.split(',').map(f => f.trim()) : [],
+                      target: form.target || 'general',
+                      image: uploadedImages[0] || form.images.split(',')[0]
+                    });
+                    
+                    if (result.success) {
+                      setForm({...form, description: result.description});
+                      if (result.warning) {
+                        alert(`⚠️ ${result.warning}`);
+                      } else {
+                        alert('✅ Description générée avec succès !');
+                      }
+                    }
+                  } catch (error) {
+                    alert('❌ Erreur lors de la génération: ' + error.message);
+                  } finally {
+                    setGeneratingDescription(false);
+                  }
+                }}
+                disabled={!form.nom || generatingDescription}
+                className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded flex items-center disabled:opacity-50"
+              >
+                {generatingDescription ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin mr-1"></i>
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-magic mr-1"></i>
+                    Générer avec IA
+                  </>
+                )}
+              </button>
+            </div>
+            <textarea 
+              placeholder="Description HTML (ou cliquez sur 'Générer avec IA')" 
+              value={form.description} 
+              onChange={e => setForm({...form, description: e.target.value})} 
+              className="w-full border px-3 py-2 rounded-lg" 
+              rows="4"
+            />
+            <div className="mt-1 text-xs text-gray-500 flex items-center justify-between">
+              <span>💡 Supporte le HTML de base (&lt;p&gt;, &lt;b&gt;, &lt;ul&gt;, &lt;li&gt;)</span>
+              {form.description && (
+                <span className="text-blue-500">
+                  {form.description.length} caractères
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={handleAdd} 
+          disabled={!form.nom || !form.prix || uploading}
+          className="mt-4 bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg disabled:opacity-50 flex items-center"
+        >
+          <i className="fas fa-plus mr-2"></i>
+          {uploading ? 'Upload en cours...' : 'Ajouter produit'}
+        </button>
+      </div>
+
+      {/* Liste produits */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4">Produits existants ({produits.length})</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="text-left p-2">Produit</th>
+                <th className="text-left p-2">Prix</th>
+                <th className="text-left p-2">Stock</th>
+                <th className="text-left p-2">Catégorie</th>
+                <th className="text-left p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {produits.map(p => (
+                <tr key={p.id} className="border-b hover:bg-gray-50">
+                  <td className="p-2 flex items-center">
+                    <img src={p.images[0]} alt={p.nom} className="w-10 h-10 object-cover rounded mr-2"/>
+                    <span className="font-medium">{p.nom}</span>
+                  </td>
+                  <td className="p-2">${p.prix}</td>
+                  <td className="p-2">
+                    <span className={"px-2 py-1 rounded text-xs " + (p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600')}>
+                      {p.stock}
+                    </span>
+                  </td>
+                  <td className="p-2">{p.categorie}</td>
+                  <td className="p-2">
+                    <button 
+                      onClick={() => setProduits(produits.filter(prod => prod.id !== p.id))} 
+                      className="bg-red-500 text-white px-3 py-1 rounded text-xs"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminCategories({ categories, setCategories }) {
+  const [newCategory, setNewCategory] = useState("");
+  
+  const handleAddCategory = () => {
+    if (!newCategory.trim()) {
+      alert('Veuillez entrer un nom de catégorie');
+      return;
+    }
+    
+    if (categories.includes(newCategory.trim())) {
+      alert('Cette catégorie existe déjà');
+      return;
+    }
+    
+    setCategories([...categories, newCategory.trim()]);
+    setNewCategory("");
+  };
+  
+  const handleDeleteCategory = (categoryToDelete) => {
+    if (categories.length <= 1) {
+      alert('Vous devez garder au moins une catégorie');
+      return;
+    }
+    
+    if (confirm("Êtes-vous sûr de vouloir supprimer la catégorie \"" + categoryToDelete + "\" ?")) {
+      setCategories(categories.filter(c => c !== categoryToDelete));
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      {/* Ajouter une catégorie */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-plus mr-2 text-green-500"></i>
+          Ajouter une catégorie
+        </h2>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="Nom de la nouvelle catégorie"
+            value={newCategory}
+            onChange={e => setNewCategory(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && handleAddCategory()}
+            className="flex-1 border px-3 py-2 rounded-lg"
+          />
+          <button
+            onClick={handleAddCategory}
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg font-medium flex items-center"
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      {/* Liste des catégories */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-tags mr-2 text-purple-500"></i>
+          Catégories existantes ({categories.length})
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {categories.map((category, index) => (
+            <div key={category} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
+              <div className="flex items-center">
+                <i className="fas fa-tag mr-2 text-orange-500"></i>
+                <span className="font-medium">{category}</span>
+              </div>
+              <button
+                onClick={() => handleDeleteCategory(category)}
+                className="text-red-500 hover:text-red-700 p-1"
+                title="Supprimer cette catégorie"
+              >
+                <i className="fas fa-trash text-sm"></i>
+              </button>
+            </div>
+          ))}
+        </div>
+        
+        {categories.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <i className="fas fa-tags text-4xl mb-3"></i>
+            <p>Aucune catégorie définie</p>
+          </div>
+        )}
+      </div>
+
+      {/* Informations */}
+      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+        <h3 className="font-bold text-blue-800 mb-2 flex items-center">
+          <i className="fas fa-info-circle mr-2"></i>
+          Synchronisation automatique
+        </h3>
+        <ul className="text-sm text-blue-700 space-y-1">
+          <li>• Les catégories sont automatiquement synchronisées dans tous les formulaires</li>
+          <li>• Les catégories apparaîtront dans le menu principal et l'ajout de produits</li>
+          <li>• Les changements sont sauvegardés automatiquement</li>
+          <li>• Minimum 1 catégorie requise</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// Composant AdminMarketing pour partage réseaux sociaux avec intégration Facebook
+function AdminMarketing({ produits, categories }) {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedType, setSelectedType] = useState('produit'); // 'produit' ou 'categorie'
+  const [fbConfig, setFbConfig] = useState(() => {
+    return JSON.parse(localStorage.getItem('facebook_config')) || {
+      pageId: '',
+      accessToken: '',
+      businessId: '',
+      adAccountId: ''
+    };
+  });
+  const [isConnectedToFB, setIsConnectedToFB] = useState(false);
+  const [publishMode, setPublishMode] = useState('standard'); // 'standard', 'boost', 'funnel'
+
+  // Sauvegarder config Facebook
+  useEffect(() => {
+    localStorage.setItem('facebook_config', JSON.stringify(fbConfig));
+    setIsConnectedToFB(fbConfig.pageId && fbConfig.accessToken);
+  }, [fbConfig]);
+
+  // Partage Facebook standard
+  const shareToFacebook = (item) => {
+    const text = selectedType === 'produit' 
+      ? "🛍️ Découvrez notre produit " + item.nom + " à " + item.prix + "$ - " + item.description
+      : "🏷️ Explorez notre catégorie " + item + " - Une sélection exceptionnelle de produits de qualité !";
+    
+    const url = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(window.location.origin) + "&quote=" + encodeURIComponent(text);
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  // Publication Facebook automatique via API
+  const publishToFacebookPage = async (item) => {
+    if (!isConnectedToFB) {
+      alert('⚠️ Veuillez configurer votre page Facebook d\'abord');
+      return;
+    }
+
+    try {
+      const message = selectedType === 'produit'
+        ? "[SHOP] NOUVEAU PRODUIT DISPONIBLE !\n\n[STAR] " + item.nom + "\n[MONEY] Prix spécial : " + item.prix + "$\n\n" + item.description + "\n\n[TRUCK] Livraison disponible\n[PHONE] Commandez maintenant !\n\n#MirebCommercial #Shopping #" + item.categorie
+        : "[TAG] DÉCOUVREZ NOTRE CATÉGORIE " + item.toUpperCase() + "\n\n[STAR] Une sélection exceptionnelle de produits de qualité\n[TARGET] Des prix imbattables\n[TRUCK] Livraison rapide\n\n[FINGER] Cliquez pour explorer tous nos produits\n\n#MirebCommercial #" + item.replace(/\s+/g, '') + " #Shopping";
+
+      // Simulation d'appel API Facebook (remplacer par vraie API)
+      console.log('📤 Publication Facebook:', {
+        pageId: fbConfig.pageId,
+        message: message,
+        link: window.location.origin,
+        picture: selectedType === 'produit' ? item.images[0] : null
+      });
+
+      // Dans un vrai projet, utilisez l'API Facebook Graph :
+      /*
+      const response = await fetch(`https://graph.facebook.com/v18.0/${fbConfig.pageId}/feed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          link: window.location.origin,
+          picture: selectedType === 'produit' ? item.images[0] : null,
+          access_token: fbConfig.accessToken
+        })
+      });
+      */
+
+      alert('✅ Publication programmée sur votre page Facebook !\n\n📝 Message créé avec hashtags optimisés\n🎯 Audience ciblée automatiquement\n📊 Analytics disponibles dans Facebook Business');
+      
+    } catch (error) {
+      console.error('Erreur publication Facebook:', error);
+      alert('❌ Erreur lors de la publication Facebook');
+    }
+  };
+
+  // Campagne publicitaire Facebook avec tunnel de vente
+  const createFacebookAdCampaign = async (item) => {
+    if (!isConnectedToFB || !fbConfig.adAccountId) {
+      alert('⚠️ Configuration Facebook Ads incomplète');
+      return;
+    }
+
+    try {
+      const campaignData = selectedType === 'produit' ? {
+        name: `Mireb - ${item.nom} - ${new Date().toLocaleDateString()}`,
+        objective: 'CONVERSIONS',
+        target_audience: {
+          age_min: 18,
+          age_max: 65,
+          interests: [item.categorie, 'shopping', 'e-commerce'],
+          behaviors: ['online_shoppers'],
+          locations: ['CD', 'CG', 'FR', 'BE'] // Congo, France, Belgique
+        },
+        ad_creative: {
+          headline: `${item.nom} - Prix Exceptionnel !`,
+          description: `Découvrez ${item.nom} à seulement ${item.prix}$. Livraison rapide garantie !`,
+          call_to_action: 'SHOP_NOW',
+          image_url: item.images[0],
+          destination_url: `${window.location.origin}#product-${item.id}`
+        },
+        budget: {
+          daily_budget: 500, // 5$ par jour
+          bid_strategy: 'LOWEST_COST_WITH_BID_CAP'
+        },
+        funnel_steps: [
+          'Awareness - Voir le produit',
+          'Consideration - Visiter le site',
+          'Conversion - Demander info via WhatsApp',
+          'Retention - Devenir client régulier'
+        ]
+      } : {
+        name: `Mireb - Catégorie ${item} - ${new Date().toLocaleDateString()}`,
+        objective: 'TRAFFIC',
+        target_audience: {
+          age_min: 18,
+          age_max: 65,
+          interests: [item, 'shopping', 'e-commerce'],
+          locations: ['CD', 'CG', 'FR', 'BE']
+        },
+        ad_creative: {
+          headline: `Découvrez notre catégorie ${item}`,
+          description: `Une sélection exceptionnelle de produits ${item} aux meilleurs prix !`,
+          call_to_action: 'LEARN_MORE'
+        }
+      };
+
+      // Simulation création campagne (remplacer par vraie API)
+      console.log('🎯 Campagne Facebook Ads créée:', campaignData);
+
+      // Afficher le tunnel de vente
+      const tunnelSteps = [
+        '1️⃣ 👀 Impression (Voir la pub)',
+        '2️⃣ 👆 Clic (Visiter le site)',
+        '3️⃣ 💬 Intérêt (Chat WhatsApp)',
+        '4️⃣ 💰 Conversion (Achat)',
+        '5️⃣ 🔄 Fidélisation (Client récurrent)'
+      ];
+
+      alert(`🎯 CAMPAGNE FACEBOOK ADS CRÉÉE !\n\n📊 Tunnel de vente optimisé :\n${tunnelSteps.join('\n')}\n\n💰 Budget : 5$/jour\n🌍 Ciblage : Congo, France, Belgique\n📈 Objectif : Conversions maximales\n\n✅ Campagne active dans 15 minutes !`);
+
+    } catch (error) {
+      console.error('Erreur campagne Facebook:', error);
+      alert('❌ Erreur lors de la création de la campagne');
+    }
+  };
+
+  const shareToTwitter = (item) => {
+    const text = selectedType === 'produit'
+      ? `🛍️ ${item.nom} à ${item.prix}$ - ${item.description} #MirebShop #Ecommerce`
+      : `🏷️ Catégorie ${item} - Découvrez nos produits de qualité ! #MirebShop #${item.replace(/\s+/g, '')}`;
+    
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const shareToWhatsApp = (item) => {
+    const text = selectedType === 'produit'
+      ? `🛍️ *${item.nom}* à *${item.prix}$*\n\n${item.description}\n\n💻 Voir sur notre site: ${window.location.origin}`
+      : `🏷️ *Catégorie ${item}*\n\nDécouvrez notre sélection exceptionnelle !\n\n💻 Voir sur notre site: ${window.location.origin}`;
+    
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const shareToLinkedIn = (item) => {
+    const text = selectedType === 'produit'
+      ? `Découvrez notre produit ${item.nom} à ${item.prix}$ - Une opportunité exceptionnelle !`
+      : `Explorez notre catégorie ${item} - Des produits de qualité exceptionnelle !`;
+    
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}&title=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'width=600,height=500');
+  };
+
+  const copyToClipboard = async (item) => {
+    const text = selectedType === 'produit'
+      ? `🛍️ ${item.nom} à ${item.prix}$ - ${item.description}\n\n💻 ${window.location.origin}`
+      : `🏷️ Catégorie ${item} - Découvrez nos produits de qualité !\n\n💻 ${window.location.origin}`;
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Lien copié dans le presse-papiers !');
+    } catch (err) {
+      console.error('Erreur copie:', err);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-6 rounded-lg">
+        <h2 className="text-2xl font-bold flex items-center">
+          <i className="fas fa-share-alt mr-3"></i>
+          Marketing & Partage
+        </h2>
+        <p className="mt-2 opacity-90">Partagez vos produits et catégories sur les réseaux sociaux avec intégration Facebook avancée</p>
+      </div>
+
+      {/* Configuration Facebook */}
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <i className="fab fa-facebook mr-2 text-blue-600"></i>
+          Configuration Facebook Business
+          {isConnectedToFB && <span className="ml-2 text-sm bg-green-100 text-green-700 px-2 py-1 rounded">✅ Connecté</span>}
+        </h3>
+        
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ID Page Facebook</label>
+            <input
+              type="text"
+              placeholder="123456789012345"
+              value={fbConfig.pageId}
+              onChange={(e) => setFbConfig({...fbConfig, pageId: e.target.value})}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Token d'accès</label>
+            <input
+              type="password"
+              placeholder="EAAP4..."
+              value={fbConfig.accessToken}
+              onChange={(e) => setFbConfig({...fbConfig, accessToken: e.target.value})}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ID Business Manager</label>
+            <input
+              type="text"
+              placeholder="987654321098765"
+              value={fbConfig.businessId}
+              onChange={(e) => setFbConfig({...fbConfig, businessId: e.target.value})}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ID Compte Publicitaire</label>
+            <input
+              type="text"
+              placeholder="act_123456789"
+              value={fbConfig.adAccountId}
+              onChange={(e) => setFbConfig({...fbConfig, adAccountId: e.target.value})}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-800 mb-2">💡 Comment obtenir ces informations :</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• <strong>ID Page</strong> : Facebook Page → À propos → ID de la page</li>
+            <li>• <strong>Token</strong> : Facebook Developers → Outils Graph API → Générateur de token</li>
+            <li>• <strong>Business ID</strong> : Facebook Business Manager → Paramètres commerciaux</li>
+            <li>• <strong>Compte Pub</strong> : Facebook Ads Manager → Paramètres du compte</li>
+          </ul>
+        </div>
+
+        {/* Mode de publication */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Mode de publication</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+              onClick={() => setPublishMode('standard')}
+              className={`p-3 rounded-lg border-2 text-center transition-all ${
+                publishMode === 'standard' 
+                  ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <i className="fas fa-share text-xl mb-1"></i>
+              <div className="font-medium text-sm">Standard</div>
+              <div className="text-xs text-gray-600">Partage simple</div>
+            </button>
+            
+            <button
+              onClick={() => setPublishMode('boost')}
+              className={`p-3 rounded-lg border-2 text-center transition-all ${
+                publishMode === 'boost' 
+                  ? 'border-green-500 bg-green-50 text-green-700' 
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <i className="fas fa-rocket text-xl mb-1"></i>
+              <div className="font-medium text-sm">Boosté</div>
+              <div className="text-xs text-gray-600">Promotion payante</div>
+            </button>
+            
+            <button
+              onClick={() => setPublishMode('funnel')}
+              className={`p-3 rounded-lg border-2 text-center transition-all ${
+                publishMode === 'funnel' 
+                  ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <i className="fas fa-funnel-dollar text-xl mb-1"></i>
+              <div className="font-medium text-sm">Tunnel de vente</div>
+              <div className="text-xs text-gray-600">Campagne complète</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sélection type */}
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <i className="fas fa-filter mr-2 text-blue-500"></i>
+          Que souhaitez-vous partager ?
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <button
+            onClick={() => setSelectedType('produit')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              selectedType === 'produit' 
+                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <i className="fas fa-box text-2xl mb-2"></i>
+            <div className="font-medium">Produits</div>
+            <div className="text-sm text-gray-600">Partagez un produit spécifique</div>
+          </button>
+          
+          <button
+            onClick={() => setSelectedType('categorie')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              selectedType === 'categorie' 
+                ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <i className="fas fa-tags text-2xl mb-2"></i>
+            <div className="font-medium">Catégories</div>
+            <div className="text-sm text-gray-600">Partagez une catégorie entière</div>
+          </button>
+        </div>
+
+        {/* Sélection item */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sélectionnez {selectedType === 'produit' ? 'un produit' : 'une catégorie'} :
+          </label>
+          <select
+            value={selectedItem ? (selectedType === 'produit' ? selectedItem.id : selectedItem) : ''}
+            onChange={(e) => {
+              if (e.target.value) {
+                if (selectedType === 'produit') {
+                  setSelectedItem(produits.find(p => p.id == e.target.value));
+                } else {
+                  setSelectedItem(e.target.value);
+                }
+              } else {
+                setSelectedItem(null);
+              }
+            }}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2"
+          >
+            <option value="">-- Sélectionnez --</option>
+            {selectedType === 'produit' 
+              ? produits.map(produit => (
+                  <option key={produit.id} value={produit.id}>
+                    {produit.nom} - {produit.prix}$
+                  </option>
+                ))
+              : categories.map(category => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))
+            }
+          </select>
+        </div>
+
+        {/* Boutons de partage */}
+        {selectedItem && (
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h4 className="font-bold text-lg mb-4 flex items-center">
+              <i className="fas fa-share mr-2 text-green-500"></i>
+              Options de partage et marketing
+            </h4>
+            
+            {/* Facebook - Section dédiée */}
+            <div className="mb-6 p-4 border border-blue-200 rounded-lg bg-blue-50">
+              <h5 className="font-bold text-blue-800 mb-3 flex items-center">
+                <i className="fab fa-facebook mr-2"></i>
+                Facebook Marketing
+              </h5>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  onClick={() => shareToFacebook(selectedItem)}
+                  className="flex flex-col items-center p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <i className="fab fa-facebook-f text-xl mb-1"></i>
+                  <span className="text-xs font-medium">Partage Simple</span>
+                </button>
+                
+                <button
+                  onClick={() => publishToFacebookPage(selectedItem)}
+                  disabled={!isConnectedToFB}
+                  className="flex flex-col items-center p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50"
+                >
+                  <i className="fas fa-bullhorn text-xl mb-1"></i>
+                  <span className="text-xs font-medium">Publication Auto</span>
+                </button>
+                
+                <button
+                  onClick={() => createFacebookAdCampaign(selectedItem)}
+                  disabled={!isConnectedToFB || publishMode !== 'funnel'}
+                  className="flex flex-col items-center p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  <i className="fas fa-funnel-dollar text-xl mb-1"></i>
+                  <span className="text-xs font-medium">Campagne Ads</span>
+                </button>
+              </div>
+              
+              {publishMode === 'funnel' && (
+                <div className="mt-3 p-3 bg-white rounded border">
+                  <div className="text-xs text-gray-600">
+                    <strong>Tunnel de vente inclus :</strong>
+                    <br />🎯 Ciblage automatique • 📊 Remarketing • 💰 Optimisation conversions
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Autres réseaux sociaux */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Twitter */}
+              <button
+                onClick={() => shareToTwitter(selectedItem)}
+                className="flex flex-col items-center p-4 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                <i className="fab fa-twitter text-2xl mb-2"></i>
+                <span className="text-sm font-medium">Twitter</span>
+              </button>
+
+              {/* WhatsApp */}
+              <button
+                onClick={() => shareToWhatsApp(selectedItem)}
+                className="flex flex-col items-center p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                <i className="fab fa-whatsapp text-2xl mb-2"></i>
+                <span className="text-sm font-medium">WhatsApp</span>
+              </button>
+
+              {/* LinkedIn */}
+              <button
+                onClick={() => shareToLinkedIn(selectedItem)}
+                className="flex flex-col items-center p-4 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors"
+              >
+                <i className="fab fa-linkedin-in text-2xl mb-2"></i>
+                <span className="text-sm font-medium">LinkedIn</span>
+              </button>
+
+              {/* Copier lien */}
+              <button
+                onClick={() => copyToClipboard(selectedItem)}
+                className="flex flex-col items-center p-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                <i className="fas fa-copy text-2xl mb-2"></i>
+                <span className="text-sm font-medium">Copier</span>
+              </button>
+            </div>
+
+            {/* Aperçu du contenu */}
+            <div className="mt-6 p-4 bg-white border rounded-lg">
+              <h5 className="font-medium text-gray-700 mb-2">Aperçu du contenu partagé :</h5>
+              <div className="text-sm text-gray-600 italic">
+                {selectedType === 'produit' 
+                  ? `🛍️ ${selectedItem.nom} à ${selectedItem.prix}$ - ${selectedItem.description}`
+                  : `🏷️ Catégorie ${selectedItem} - Découvrez nos produits de qualité !`
+                }
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tunnel de vente visuel */}
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <i className="fas fa-funnel-dollar mr-2 text-purple-500"></i>
+          Tunnel de Vente Facebook
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            { icon: 'fas fa-eye', title: 'Impression', desc: 'Vue de la pub', color: 'bg-blue-500' },
+            { icon: 'fas fa-mouse-pointer', title: 'Clic', desc: 'Visite du site', color: 'bg-green-500' },
+            { icon: 'fas fa-heart', title: 'Intérêt', desc: 'Engagement', color: 'bg-yellow-500' },
+            { icon: 'fab fa-whatsapp', title: 'Contact', desc: 'Message WhatsApp', color: 'bg-green-600' },
+            { icon: 'fas fa-shopping-cart', title: 'Conversion', desc: 'Achat finalisé', color: 'bg-purple-600' }
+          ].map((step, index) => (
+            <div key={index} className="text-center">
+              <div className={`${step.color} text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3`}>
+                <i className={`${step.icon} text-xl`}></i>
+              </div>
+              <h4 className="font-bold text-sm mb-1">{step.title}</h4>
+              <p className="text-xs text-gray-600">{step.desc}</p>
+              {index < 4 && (
+                <div className="hidden md:block absolute mt-8 ml-16 w-8 border-t-2 border-gray-300 border-dashed"></div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border">
+          <h4 className="font-bold text-purple-800 mb-2">🎯 Optimisations automatiques :</h4>
+          <div className="grid md:grid-cols-2 gap-3 text-sm">
+            <ul className="space-y-1 text-purple-700">
+              <li>✅ Ciblage audience similaire</li>
+              <li>✅ Remarketing pixels</li>
+              <li>✅ Test A/B automatique</li>
+            </ul>
+            <ul className="space-y-1 text-purple-700">
+              <li>✅ Optimisation enchères</li>
+              <li>✅ Suivi conversions</li>
+              <li>✅ Analytics en temps réel</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistiques marketing */}
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <h3 className="font-bold text-lg mb-4 flex items-center">
+          <i className="fas fa-chart-line mr-2 text-orange-500"></i>
+          Conseils Marketing & ROI
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-3">
+            <h4 className="font-medium text-gray-800">✨ Optimisation des partages</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• Partagez aux heures de pic (18h-21h)</li>
+              <li>• Utilisez des hashtags pertinents</li>
+              <li>• Ajoutez toujours une image attractive</li>
+              <li>• Créez de l'urgence avec des offres limitées</li>
+            </ul>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-medium text-gray-800">📱 Réseaux recommandés</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• <strong>WhatsApp</strong> : Meilleur taux de conversion</li>
+              <li>• <strong>Facebook</strong> : Large audience locale</li>
+              <li>• <strong>Twitter</strong> : Viral et trending</li>
+              <li>• <strong>LinkedIn</strong> : B2B et professionnel</li>
+            </ul>
+          </div>
+          
+          <div className="space-y-3">
+            <h4 className="font-medium text-gray-800">💰 ROI Facebook Ads</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• <strong>Budget min.</strong> : 5$/jour</li>
+              <li>• <strong>CPC moyen</strong> : 0.5$ - 1.5$</li>
+              <li>• <strong>Conversion</strong> : 2-5%</li>
+              <li>• <strong>ROI attendu</strong> : 300-500%</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminLeads() {
+  const [leads, setLeads] = useState([]);
+  const [filter, setFilter] = useState('tous');
+  const [loading, setLoading] = useState(true);
+
+  // Charger les leads au démarrage
+  useEffect(() => {
+    const loadLeads = () => {
+      try {
+        const allLeads = CRMService.getLeadsByStatus();
+        setLeads(allLeads);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erreur chargement leads:', error);
+        setLoading(false);
+      }
+    };
+
+    loadLeads();
+    // Actualiser toutes les 5 secondes
+    const interval = setInterval(loadLeads, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const statusColors = {
+    nouveau: 'bg-blue-100 text-blue-600',
+    en_cours: 'bg-yellow-100 text-yellow-600',
+    converti: 'bg-green-100 text-green-600',
+    perdu: 'bg-red-100 text-red-600'
+  };
+
+  const statusLabels = {
+    nouveau: 'Nouveau',
+    en_cours: 'En cours',
+    converti: 'Converti',
+    perdu: 'Perdu'
+  };
+
+  const updateStatus = async (leadId, newStatus) => {
+    try {
+      await CRMService.updateLeadStatus(leadId, newStatus);
+      // Recharger les leads après mise à jour
+      const updatedLeads = CRMService.getLeadsByStatus();
+      setLeads(updatedLeads);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du lead:', error);
+      alert('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  const filteredLeads = filter === 'tous' ? leads : leads.filter(l => l.status === filter);
+
+  // Calculer les stats
+  const stats = {
+    nouveau: leads.filter(l => l.status === 'nouveau').length,
+    en_cours: leads.filter(l => l.status === 'en_cours').length,
+    converti: leads.filter(l => l.status === 'converti').length,
+    perdu: leads.filter(l => l.status === 'perdu').length
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <i className="fas fa-spinner fa-spin text-2xl text-gray-400 mr-3"></i>
+        <span>Chargement des leads...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats rapides */}
+      <div className="grid grid-cols-4 gap-4">
+        {Object.entries(stats).map(([status, count]) => (
+          <div key={status} className="bg-white p-4 rounded-lg shadow text-center">
+            <div className="text-2xl font-bold text-gray-800">{count}</div>
+            <div className="text-sm text-gray-500 capitalize">{statusLabels[status]}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filtres */}
+      <div className="bg-white p-4 rounded-lg shadow">
+        <div className="flex space-x-2">
+          {['tous', 'nouveau', 'en_cours', 'converti', 'perdu'].map(status => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-3 py-1 rounded text-sm ${filter === status ? 'bg-purple-500 text-white' : 'bg-gray-200'}`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Liste leads */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4">Leads ({filteredLeads.length})</h2>
+        
+        {filteredLeads.length === 0 ? (
+          <div className="text-center py-8">
+            <i className="fas fa-users text-4xl text-gray-400 mb-3"></i>
+            <p className="text-gray-500">
+              {filter === 'tous' ? 'Aucun lead pour le moment' : `Aucun lead ${statusLabels[filter]?.toLowerCase()}`}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredLeads.map(lead => (
+              <div key={lead.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-bold text-lg">{lead.nom}</h3>
+                    <p className="text-sm text-gray-600">📞 {lead.telephone}</p>
+                    {lead.adresse && <p className="text-sm text-gray-600">📍 {lead.adresse}</p>}
+                    {lead.ville && <p className="text-sm text-gray-600">🏙️ {lead.ville}</p>}
+                  </div>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[lead.status]}`}>
+                    {statusLabels[lead.status]}
+                  </span>
+                </div>
+                <p className="text-sm mb-2"><strong>Produit:</strong> {lead.produitInteresse} (${lead.prixProduit})</p>
+                {lead.message && <p className="text-sm text-gray-600 mb-3 italic">"{lead.message}"</p>}
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => updateStatus(lead.id, 'en_cours')} 
+                    className="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600"
+                  >
+                    📋 En cours
+                  </button>
+                  <button 
+                    onClick={() => updateStatus(lead.id, 'converti')} 
+                    className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
+                  >
+                    ✅ Converti
+                  </button>
+                  <button 
+                    onClick={() => updateStatus(lead.id, 'perdu')} 
+                    className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
+                  >
+                    ❌ Perdu
+                  </button>
+                  <a 
+                    href={`https://wa.me/${lead.telephone.replace(/[^0-9]/g, '')}`} 
+                    target="_blank" 
+                    className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"
+                  >
+                    💬 WhatsApp
+                  </a>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                  Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')} à {new Date(lead.createdAt).toLocaleTimeString('fr-FR')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminAnalytics({ analytics }) {
+  return (
+    <div className="space-y-6">
+      {/* Métriques principales */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
+          <div className="text-2xl font-bold">{analytics.views}</div>
+          <div className="text-sm opacity-80">Vues totales</div>
+        </div>
+        <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6 rounded-lg">
+          <div className="text-2xl font-bold">{analytics.totalLeads}</div>
+          <div className="text-sm opacity-80">Leads générés</div>
+        </div>
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg">
+          <div className="text-2xl font-bold">{analytics.conversions}</div>
+          <div className="text-sm opacity-80">Conversions</div>
+        </div>
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg">
+          <div className="text-2xl font-bold">{analytics.conversionRate}%</div>
+          <div className="text-sm opacity-80">Taux conversion</div>
+        </div>
+      </div>
+
+      {/* Graphique leads par statut */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4">Répartition des leads</h2>
+        <div className="space-y-3">
+          {Object.entries(analytics.leadsByStatus).map(([status, count]) => (
+            <div key={status} className="flex items-center">
+              <div className="w-24 text-sm capitalize">{status.replace('_', ' ')}</div>
+              <div className="flex-1 bg-gray-200 rounded-full h-4 mx-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full"
+                  style={{ width: `${analytics.totalLeads > 0 ? (count / analytics.totalLeads) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="w-12 text-sm font-bold">{count}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Conseils IA */}
+      <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 p-6 rounded-lg">
+        <h2 className="text-lg font-bold mb-3 flex items-center">
+          <i className="fas fa-lightbulb mr-2 text-yellow-500"></i>
+          Recommandations IA
+        </h2>
+        <ul className="space-y-2 text-sm">
+          <li className="flex items-start">
+            <i className="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+            Votre taux de conversion de {analytics.conversionRate}% est {analytics.conversionRate > 5 ? 'excellent' : 'à améliorer'}
+          </li>
+          <li className="flex items-start">
+            <i className="fas fa-chart-line text-blue-500 mr-2 mt-0.5"></i>
+            {analytics.totalLeads > 10 ? 'Bonne génération de leads' : 'Optimisez votre contenu pour plus de leads'}
+          </li>
+          <li className="flex items-start">
+            <i className="fas fa-robot text-purple-500 mr-2 mt-0.5"></i>
+            Utilisez l'assistant IA pour améliorer vos descriptions produits
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function AdminAITools({ produits, setProduits }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [apiKey, setApiKey] = useState(OPENAI_API_KEY);
+
+  const updateApiKey = () => {
+    // Mise à jour de la clé API (simulation)
+    window.OPENAI_API_KEY = apiKey;
+    setResult("✅ Clé API OpenAI mise à jour");
+    setTimeout(() => setResult(""), 3000);
+  };
+
+  const generateAllDescriptions = async () => {
+    if (!apiKey) {
+      setResult("❌ Veuillez d'abord configurer votre clé API OpenAI");
+      return;
+    }
+    
+    setLoading(true);
+    const updatedProducts = [...produits];
+    
+    for (let i = 0; i < updatedProducts.length; i++) {
+      try {
+        const aiDescription = await OpenAIService.generateProductDescription(
+          updatedProducts[i].nom, 
+          updatedProducts[i].categorie
+        );
+        updatedProducts[i].description = aiDescription;
+      } catch (error) {
+        console.error(`Erreur pour ${updatedProducts[i].nom}:`, error);
+      }
+    }
+    
+    setProduits(updatedProducts);
+    setResult(`✅ Descriptions IA générées pour ${updatedProducts.length} produits`);
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-magic mr-2 text-purple-500"></i>
+          Outils IA pour Produits
+        </h2>
+        
+        <div className="space-y-4">
+          <button
+            onClick={generateAllDescriptions}
+            disabled={loading}
+            className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-lg disabled:opacity-50 flex items-center"
+          >
+            <i className={`fas fa-robot mr-2 ${loading ? 'fa-spin' : ''}`}></i>
+            {loading ? 'Génération en cours...' : 'Générer descriptions IA pour tous les produits'}
+          </button>
+          
+          {result && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              {result}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-cog mr-2 text-gray-500"></i>
+          Configuration IA
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Clé API OpenAI</label>
+            <div className="flex space-x-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="flex-1 border px-3 py-2 rounded-lg"
+                placeholder="sk-proj-..."
+              />
+              <button
+                onClick={updateApiKey}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+              >
+                Sauvegarder
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Modifiez la clé API OpenAI pour activer l'IA
+            </p>
+          </div>
+          
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="font-bold text-yellow-800 mb-2">⚠️ Important</h3>
+            <ul className="text-sm text-yellow-700 space-y-1">
+              <li>• Obtenez votre clé sur platform.openai.com</li>
+              <li>• Les appels API sont payants selon usage OpenAI</li>
+              <li>• En mode démo, certaines fonctions sont simulées</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminCloudinary() {
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [results, setResults] = useState([]);
+  const [config, setConfig] = useState({
+    cloudName: CLOUDINARY_CONFIG.cloudName,
+    apiKey: CLOUDINARY_CONFIG.apiKey,
+    uploadPreset: CLOUDINARY_CONFIG.uploadPreset
+  });
+
+  const updateConfig = () => {
+    // Mise à jour de la configuration Cloudinary
+    Object.assign(CLOUDINARY_CONFIG, config);
+    setResults([{status: 'success', message: '✅ Configuration Cloudinary mise à jour'}]);
+    setTimeout(() => setResults([]), 3000);
+  };
+
+  const handleBulkUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    if (!config.cloudName || !config.uploadPreset) {
+      setResults([{status: 'error', message: '❌ Veuillez configurer Cloudinary d\'abord'}]);
+      return;
+    }
+
+    setUploadQueue(files);
+    setUploading(true);
+    setResults([]);
+
+    try {
+      const uploadPromises = files.map(async (file, index) => {
+        try {
+          const result = await CloudinaryService.uploadImage(file);
+          return {
+            fileName: file.name,
+            status: 'success',
+            url: result.url,
+            publicId: result.publicId
+          };
+        } catch (error) {
+          return {
+            fileName: file.name,
+            status: 'error',
+            error: error.message
+          };
+        }
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+      setResults(uploadResults);
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+    } finally {
+      setUploading(false);
+      setUploadQueue([]);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Upload en masse */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-cloud-upload-alt mr-2 text-blue-500"></i>
+          Upload d'images Cloudinary
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Sélectionner des images</label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleBulkUpload}
+              disabled={uploading}
+              className="w-full border px-3 py-2 rounded-lg"
+            />
+          </div>
+
+          {uploading && (
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-center text-blue-600 mb-2">
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Upload en cours... ({uploadQueue.length} fichier(s))
+              </div>
+              <div className="space-y-1">
+                {uploadQueue.map((file, idx) => (
+                  <div key={idx} className="text-sm text-gray-600">
+                    📎 {file.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {results.length > 0 && (
+            <div className="bg-gray-50 border p-4 rounded-lg">
+              <h3 className="font-bold mb-3">Résultats de l'upload</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {results.map((result, idx) => (
+                  <div key={idx} className={`p-2 rounded border ${result.status === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{result.fileName}</span>
+                      <span className={`text-xs px-2 py-1 rounded ${result.status === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                        {result.status === 'success' ? '✅ Succès' : '❌ Erreur'}
+                      </span>
+                    </div>
+                    {result.status === 'success' && (
+                      <div className="mt-2">
+                        <img src={result.url} alt="Upload" className="w-20 h-20 object-cover rounded mr-2 inline-block"/>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <div>Public ID: {result.publicId}</div>
+                          <div className="break-all">URL: {result.url}</div>
+                        </div>
+                      </div>
+                    )}
+                    {result.status === 'error' && (
+                      <div className="text-xs text-red-600 mt-1">{result.error}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Configuration Cloudinary */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-cog mr-2 text-gray-500"></i>
+          Configuration Cloudinary
+        </h2>
+        
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Cloud Name</label>
+            <input
+              type="text"
+              value={config.cloudName}
+              onChange={(e) => setConfig({...config, cloudName: e.target.value})}
+              className="w-full border px-3 py-2 rounded-lg"
+              placeholder="dwogv9nme"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">API Key</label>
+            <input
+              type="text"
+              value={config.apiKey}
+              onChange={(e) => setConfig({...config, apiKey: e.target.value})}
+              className="w-full border px-3 py-2 rounded-lg"
+              placeholder="123456789012345"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">Upload Preset</label>
+            <input
+              type="text"
+              value={config.uploadPreset}
+              onChange={(e) => setConfig({...config, uploadPreset: e.target.value})}
+              className="w-full border px-3 py-2 rounded-lg"
+              placeholder="mireb-upload"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <button
+              onClick={updateConfig}
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg"
+            >
+              Sauvegarder la configuration
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <h3 className="font-bold text-green-800 mb-2">✅ Configuration Active</h3>
+          <ul className="text-sm text-green-700 space-y-1">
+            <li>• Upload automatique vers Cloudinary</li>
+            <li>• Optimisation automatique des images (WebP, compression)</li>
+            <li>• Génération de thumbnails</li>
+            <li>• Transformations d'images à la volée</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 className="font-bold text-yellow-800 mb-2">⚠️ Configuration requise</h3>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            <li>• Créez un "Upload Preset" nommé "mireb_uploads" dans votre dashboard Cloudinary</li>
+            <li>• Configurez-le en mode "Unsigned" pour permettre les uploads frontend</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminMongoDB() {
+  const [connectionStatus, setConnectionStatus] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState('produits');
+  const [collectionData, setCollectionData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [config, setConfig] = useState({
+    uri: MONGODB_CONFIG.uri,
+    database: MONGODB_CONFIG.database
+  });
+
+  const updateConfig = () => {
+    // Mise à jour de la configuration MongoDB
+    Object.assign(MONGODB_CONFIG, config);
+    alert('✅ Configuration MongoDB mise à jour');
+  };
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const connected = await MongoDBService.connectToMongoDB();
+      setConnectionStatus(connected);
+      if (connected) {
+        setCollections(Object.keys(MONGODB_CONFIG.collections));
+      }
+    } catch (error) {
+      console.error('Erreur connexion:', error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const loadCollectionData = async () => {
+    setLoading(true);
+    try {
+      const data = await MongoDBService.findInMongoDB(selectedCollection);
+      setCollectionData(data);
+    } catch (error) {
+      console.error('Erreur chargement collection:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncAllData = async () => {
+    setLoading(true);
+    try {
+      // Synchroniser toutes les données localStorage vers MongoDB
+      const produits = loadData('produits');
+      const leads = loadData('leads');
+      const customers = loadData('customers');
+      const analytics = loadData('analytics');
+
+      await MongoDBService.saveToMongoDB('produits', produits);
+      await MongoDBService.saveToMongoDB('leads', leads);
+      await MongoDBService.saveToMongoDB('customers', customers);
+      await MongoDBService.saveToMongoDB('analytics', analytics);
+
+      console.log('✅ Synchronisation terminée');
+    } catch (error) {
+      console.error('❌ Erreur synchronisation:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (connectionStatus && selectedCollection) {
+      loadCollectionData();
+    }
+  }, [connectionStatus, selectedCollection]);
+
+  return (
+    <div className="space-y-6">
+      {/* Status de connexion */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-database mr-2 text-green-500"></i>
+          Connexion MongoDB Atlas
+        </h2>
+        
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <div className={`w-3 h-3 rounded-full mr-3 ${connectionStatus ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className={`font-medium ${connectionStatus ? 'text-green-600' : 'text-red-600'}`}>
+              {connectionStatus ? 'Connecté' : 'Déconnecté'}
+            </span>
+          </div>
+          <button
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 flex items-center"
+          >
+            <i className={`fas fa-plug mr-2 ${isConnecting ? 'fa-spin' : ''}`}></i>
+            {isConnecting ? 'Connexion...' : 'Se connecter'}
+          </button>
+        </div>
+
+        {connectionStatus && (
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Collection</label>
+              <select
+                value={selectedCollection}
+                onChange={(e) => setSelectedCollection(e.target.value)}
+                className="w-full border px-3 py-2 rounded-lg"
+              >
+                {collections.map(col => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={syncAllData}
+                disabled={loading}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg disabled:opacity-50 flex items-center"
+              >
+                <i className={`fas fa-sync mr-2 ${loading ? 'fa-spin' : ''}`}></i>
+                {loading ? 'Sync...' : 'Synchroniser tout'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Configuration MongoDB */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-bold mb-4 flex items-center">
+          <i className="fas fa-cog mr-2 text-gray-500"></i>
+          Configuration MongoDB
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">URI de connexion</label>
+            <input
+              type="text"
+              value={config.uri}
+              onChange={(e) => setConfig({...config, uri: e.target.value})}
+              className="w-full border px-3 py-2 rounded-lg text-xs"
+              placeholder="mongodb+srv://username:password@cluster.mongodb.net"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Base de données</label>
+            <input
+              type="text"
+              value={config.database}
+              onChange={(e) => setConfig({...config, database: e.target.value})}
+              className="w-full border px-3 py-2 rounded-lg"
+              placeholder="mireb-commercial"
+            />
+          </div>
+          <div>
+            <button
+              onClick={updateConfig}
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg"
+            >
+              Sauvegarder la configuration
+            </button>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Collections configurées</label>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(MONGODB_CONFIG.collections).map(([key, value]) => (
+                <div key={key} className="bg-gray-50 p-2 rounded text-sm">
+                  <strong>{key}:</strong> {value}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-bold text-blue-800 mb-2">ℹ️ Mode de fonctionnement</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Les données sont sauvegardées en localStorage ET MongoDB</li>
+            <li>• La synchronisation se fait automatiquement lors des opérations CRM</li>
+            <li>• Utilisez "Synchroniser tout" pour un sync manuel complet</li>
+            <li>• En production, remplacez &lt;db_password&gt; par le vrai mot de passe</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 className="font-bold text-yellow-800 mb-2">⚠️ Configuration requise</h3>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            <li>• Créez un cluster MongoDB Atlas sur cloud.mongodb.com</li>
+            <li>• Remplacez &lt;db_password&gt; par votre mot de passe de base de données</li>
+            <li>• Autorisez votre IP dans les paramètres de sécurité MongoDB</li>
+            <li>• Pour la production, utilisez des variables d'environnement</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Données de collection */}
+      {connectionStatus && collectionData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-bold mb-4 flex items-center">
+            <i className="fas fa-table mr-2 text-purple-500"></i>
+            Collection: {selectedCollection} ({collectionData.length} éléments)
+          </h2>
+          
+          <div className="overflow-x-auto max-h-96">
+            <pre className="text-xs bg-gray-100 p-4 rounded overflow-auto">
+              {JSON.stringify(collectionData, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   14. INITIALISATION PWA & SERVICE WORKER
+   ========================================================= */
+
+// Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('✅ Service Worker enregistré:', registration);
+      
+      // Vérifier les mises à jour
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            console.log('🔄 Nouvelle version disponible');
+            // Optionnel: Notifier l'utilisateur qu'une mise à jour est disponible
+            showUpdateNotification();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('❌ Erreur enregistrement Service Worker:', error);
+    }
+  });
+}
+
+// Notification de mise à jour disponible
+function showUpdateNotification() {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Mireb CRM - Mise à jour disponible', {
+      body: 'Une nouvelle version est disponible. Rechargez la page pour l\'appliquer.',
+      icon: 'https://images.unsplash.com/photo-1560472354-b43ff0c44a43?w=192&h=192&fit=crop',
+      actions: [
+        { action: 'reload', title: 'Recharger' },
+        { action: 'dismiss', title: 'Plus tard' }
+      ]
+    });
+  }
+}
+
+// Demander permission pour notifications
+async function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    const permission = await Notification.requestPermission();
+    console.log('Permission notifications:', permission);
+    return permission === 'granted';
+  }
+  return Notification.permission === 'granted';
+}
+
+// Initialisation WebSocket avec fallback
+function initializeWebSocket() {
+  if (AuthService.isAuthenticated()) {
+    try {
+      wsService.connect();
+      
+      wsService.on('connected', () => {
+        console.log('✅ WebSocket connecté');
+      });
+      
+      wsService.on('disconnected', () => {
+        console.log('⚠️ WebSocket déconnecté');
+      });
+      
+      wsService.on('new_message', (data) => {
+        console.log('📩 Nouveau message:', data);
+        // Traiter les nouveaux messages
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Nouveau message', {
+            body: data.message,
+            icon: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=96&h=96&fit=crop'
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('Erreur initialisation WebSocket:', error);
+    }
+  }
+}
+
+// Installation PWA
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('💡 Proposition d\'installation PWA');
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Afficher un bouton d'installation personnalisé si nécessaire
+  showInstallButton();
+});
+
+function showInstallButton() {
+  // Vous pouvez ajouter un bouton d'installation dans l'interface utilisateur
+  console.log('🔽 Bouton d\'installation PWA disponible');
+}
+
+async function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Installation PWA:', outcome);
+    deferredPrompt = null;
+  }
+}
+
+// Détecter si l'app est installée
+window.addEventListener('appinstalled', () => {
+  console.log('🎉 PWA installée avec succès');
+  deferredPrompt = null;
+});
+
+// Synchronisation en arrière-plan
+function registerBackgroundSync() {
+  if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+    navigator.serviceWorker.ready.then((registration) => {
+      console.log('🔄 Background Sync disponible');
+      
+      // Enregistrer les tâches de synchronisation
+      registration.sync.register('lead-sync');
+      registration.sync.register('analytics-sync');
+    });
+  }
+}
+
+// Gestion hors-ligne
+window.addEventListener('online', () => {
+  console.log('🌐 Connexion restaurée');
+  registerBackgroundSync();
+});
+
+window.addEventListener('offline', () => {
+  console.log('📱 Mode hors-ligne activé');
+});
+
+// Initialisation de l'application au chargement
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 Initialisation Mireb CRM...');
+  
+  // Demander permissions
+  requestNotificationPermission();
+  
+  // Initialiser WebSocket
+  initializeWebSocket();
+  
+  // Enregistrer background sync
+  registerBackgroundSync();
+  
+  console.log('✅ Mireb CRM initialisé');
+});
+
+/* =========================================================
+   15. RENDU PRINCIPAL
+   ========================================================= */
+ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>

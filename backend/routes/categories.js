@@ -1,0 +1,256 @@
+import express from 'express';
+
+const router = express.Router();
+// Mock data pour les catégories (en production, utiliser MongoDB)
+let categories = [
+  {
+    id: 1,
+    nom: 'Électronique',
+    description: 'Smartphones, ordinateurs, accessoires tech',
+    image: 'https://res.cloudinary.com/dwogv9nme/image/upload/v1/categories/electronique',
+    slug: 'electronique',
+    isActif: true,
+    ordre: 1,
+    produitCount: 0
+  },
+    id: 2,
+    nom: 'Mode',
+    description: 'Vêtements, chaussures, accessoires',
+    image: 'https://res.cloudinary.com/dwogv9nme/image/upload/v1/categories/mode',
+    slug: 'mode',
+    ordre: 2,
+    id: 3,
+    nom: 'Maison & Jardin',
+    description: 'Meubles, décoration, électroménager',
+    image: 'https://res.cloudinary.com/dwogv9nme/image/upload/v1/categories/maison',
+    slug: 'maison-jardin',
+    ordre: 3,
+    id: 4,
+    nom: 'Beauté & Santé',
+    description: 'Cosmétiques, parfums, soins',
+    image: 'https://res.cloudinary.com/dwogv9nme/image/upload/v1/categories/beaute',
+    slug: 'beaute-sante',
+    ordre: 4,
+    id: 5,
+    nom: 'Sport & Loisirs',
+    description: 'Équipements sportifs, jeux, fitness',
+    image: 'https://res.cloudinary.com/dwogv9nme/image/upload/v1/categories/sport',
+    slug: 'sport-loisirs',
+    ordre: 5,
+  }
+];
+// GET /api/categories - Obtenir toutes les catégories
+router.get('/', async (req, res) => {
+  try {
+    const includeInactif = req.query.includeInactif === 'true';
+    
+    let filteredCategories = categories;
+    if (!includeInactif) {
+      filteredCategories = categories.filter(cat => cat.isActif);
+    }
+    // Tri par ordre
+    filteredCategories.sort((a, b) => a.ordre - b.ordre);
+    res.json({
+      success: true,
+      data: filteredCategories
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des catégories:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des catégories',
+      error: error.message
+});
+// GET /api/categories/:id - Obtenir une catégorie spécifique
+router.get('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const categorie = categories.find(cat => cat.id === id);
+    if (!categorie) {
+      return res.status(404).json({
+        success: false,
+        message: 'Catégorie non trouvée'
+      });
+      data: categorie
+    console.error('Erreur lors de la récupération de la catégorie:', error);
+      message: 'Erreur lors de la récupération de la catégorie',
+// GET /api/categories/slug/:slug - Obtenir une catégorie par slug
+router.get('/slug/:slug', async (req, res) => {
+    const { slug } = req.params;
+    const categorie = categories.find(cat => cat.slug === slug && cat.isActif);
+// POST /api/categories - Créer une nouvelle catégorie
+router.post('/', async (req, res) => {
+    const { nom, description, image, ordre } = req.body;
+    if (!nom) {
+      return res.status(400).json({
+        message: 'Le nom de la catégorie est requis'
+    // Vérifier si la catégorie existe déjà
+    const existingCategory = categories.find(cat => 
+      cat.nom.toLowerCase() === nom.toLowerCase()
+    );
+    if (existingCategory) {
+      return res.status(409).json({
+        message: 'Une catégorie avec ce nom existe déjà'
+    // Générer un slug
+    const slug = nom
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    // Générer un nouvel ID
+    const newId = Math.max(...categories.map(cat => cat.id)) + 1;
+    const newCategory = {
+      id: newId,
+      nom,
+      description: description || '',
+      image: image || '',
+      slug,
+      isActif: true,
+      ordre: ordre || categories.length + 1,
+      produitCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    categories.push(newCategory);
+    res.status(201).json({
+      message: 'Catégorie créée avec succès',
+      data: newCategory
+    console.error('Erreur lors de la création de la catégorie:', error);
+      message: 'Erreur lors de la création de la catégorie',
+// PUT /api/categories/:id - Mettre à jour une catégorie
+router.put('/:id', async (req, res) => {
+    const categoryIndex = categories.findIndex(cat => cat.id === id);
+    if (categoryIndex === -1) {
+    const { nom, description, image, ordre, isActif } = req.body;
+    // Vérifier si le nom existe déjà (pour une autre catégorie)
+    if (nom) {
+      const existingCategory = categories.find(cat => 
+        cat.nom.toLowerCase() === nom.toLowerCase() && cat.id !== id
+      );
+      
+      if (existingCategory) {
+        return res.status(409).json({
+          success: false,
+          message: 'Une catégorie avec ce nom existe déjà'
+        });
+      }
+    // Mettre à jour la catégorie
+    const updatedCategory = {
+      ...categories[categoryIndex],
+      ...(nom && { nom }),
+      ...(description !== undefined && { description }),
+      ...(image !== undefined && { image }),
+      ...(ordre !== undefined && { ordre }),
+      ...(isActif !== undefined && { isActif }),
+      updatedAt: new Date().toISOString()
+    // Mettre à jour le slug si le nom a changé
+      updatedCategory.slug = nom
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    categories[categoryIndex] = updatedCategory;
+      message: 'Catégorie mise à jour avec succès',
+      data: updatedCategory
+    console.error('Erreur lors de la mise à jour de la catégorie:', error);
+      message: 'Erreur lors de la mise à jour de la catégorie',
+// DELETE /api/categories/:id - Supprimer une catégorie (soft delete)
+router.delete('/:id', async (req, res) => {
+    // Vérifier s'il y a des produits dans cette catégorie
+    // (En production, vérifier dans la base de données)
+    const category = categories[categoryIndex];
+    if (category.produitCount > 0) {
+        message: 'Impossible de supprimer une catégorie qui contient des produits'
+    // Soft delete
+    categories[categoryIndex].isActif = false;
+    categories[categoryIndex].deletedAt = new Date().toISOString();
+      message: 'Catégorie supprimée avec succès'
+    console.error('Erreur lors de la suppression de la catégorie:', error);
+      message: 'Erreur lors de la suppression de la catégorie',
+// PUT /api/categories/:id/ordre - Mettre à jour l'ordre d'une catégorie
+router.put('/:id/ordre', async (req, res) => {
+    const { nouvelOrdre } = req.body;
+    if (!nouvelOrdre || nouvelOrdre < 1) {
+        message: 'L\'ordre doit être un nombre positif'
+    const ancienOrdre = category.ordre;
+    // Mettre à jour l'ordre
+    category.ordre = nouvelOrdre;
+    category.updatedAt = new Date().toISOString();
+    // Réorganiser les autres catégories
+    categories.forEach(cat => {
+      if (cat.id !== id) {
+        if (nouvelOrdre > ancienOrdre) {
+          // Déplacer vers le bas
+          if (cat.ordre > ancienOrdre && cat.ordre <= nouvelOrdre) {
+            cat.ordre--;
+          }
+        } else {
+          // Déplacer vers le haut
+          if (cat.ordre >= nouvelOrdre && cat.ordre < ancienOrdre) {
+            cat.ordre++;
+        }
+      message: 'Ordre mis à jour avec succès',
+      data: category
+    console.error('Erreur lors de la mise à jour de l\'ordre:', error);
+      message: 'Erreur lors de la mise à jour de l\'ordre',
+// GET /api/categories/stats/overview - Statistiques des catégories
+router.get('/stats/overview', async (req, res) => {
+    const totalCategories = categories.filter(cat => cat.isActif).length;
+    const categoriesInactives = categories.filter(cat => !cat.isActif).length;
+    const categoriesAvecProduits = categories.filter(cat => cat.produitCount > 0).length;
+    // En production, calculer depuis la base de données des produits
+    const statistiquesParCategorie = categories
+      .filter(cat => cat.isActif)
+      .map(cat => ({
+        nom: cat.nom,
+        id: cat.id,
+        produitCount: cat.produitCount,
+        ordre: cat.ordre
+      }))
+      .sort((a, b) => b.produitCount - a.produitCount);
+      data: {
+        totalCategories,
+        categoriesInactives,
+        categoriesAvecProduits,
+        statistiquesParCategorie
+    console.error('Erreur lors de la récupération des statistiques:', error);
+      message: 'Erreur lors de la récupération des statistiques',
+// POST /api/categories/import - Importer des catégories en masse
+router.post('/import', async (req, res) => {
+    const { categories: importCategories } = req.body;
+    if (!Array.isArray(importCategories) || importCategories.length === 0) {
+        message: 'Liste de catégories invalide'
+    const newCategories = [];
+    const errors = [];
+    for (let i = 0; i < importCategories.length; i++) {
+      const cat = importCategories[i];
+      if (!cat.nom) {
+        errors.push(`Ligne ${i + 1}: Nom manquant`);
+        continue;
+      // Vérifier si existe déjà
+      const existing = categories.find(existing => 
+        existing.nom.toLowerCase() === cat.nom.toLowerCase()
+      if (existing) {
+        errors.push(`Ligne ${i + 1}: "${cat.nom}" existe déjà`);
+      // Créer la nouvelle catégorie
+      const newId = Math.max(...categories.map(c => c.id), 0) + newCategories.length + 1;
+      const slug = cat.nom
+      const newCategory = {
+        id: newId,
+        description: cat.description || '',
+        image: cat.image || '',
+        slug,
+        isActif: true,
+        ordre: categories.length + newCategories.length + 1,
+        produitCount: 0,
+        createdAt: new Date().toISOString()
+      };
+      newCategories.push(newCategory);
+    // Ajouter les nouvelles catégories
+    categories.push(...newCategories);
+      message: `${newCategories.length} catégorie(s) importée(s) avec succès`,
+        imported: newCategories,
+        errors
+    console.error('Erreur lors de l\'import des catégories:', error);
+      message: 'Erreur lors de l\'import des catégories',
+export default router;

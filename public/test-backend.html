@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Backend Mireb</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #results { margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Backend Mireb CRM</h1>
+    
+    <div class="test-section">
+        <h3>1. Test de Connexion</h3>
+        <button onclick="testHealth()">Tester la connexion</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Ajout Produit</h3>
+        <button onclick="testAddProduct()">Ajouter un produit de test</button>
+        <div id="product-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Liste Produits</h3>
+        <button onclick="testGetProducts()">Récupérer les produits</button>
+        <div id="products-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Test Ajout Lead</h3>
+        <button onclick="testAddLead()">Ajouter un lead de test</button>
+        <div id="lead-result"></div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            results.innerHTML += `<div class="${type}">[${timestamp}] ${message}</div>`;
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('health-result').innerHTML = 
+                        `<div class="success">✅ Connexion OK: ${data.message}</div>`;
+                    log('Test de connexion réussi', 'success');
+                } else {
+                    throw new Error(`Erreur ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = 
+                    `<div class="error">❌ Erreur: ${error.message}</div>`;
+                log(`Erreur de connexion: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAddProduct() {
+            const productData = {
+                nom: "Produit Test",
+                description: "Description du produit de test",
+                prix: 99.99,
+                categorie: "Test",
+                tags: ["test", "demo"],
+                image: "https://via.placeholder.com/300x200",
+                stock: 10,
+                statut: "actif"
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('product-result').innerHTML = 
+                        `<div class="success">✅ Produit ajouté: ID ${data.data.id}</div>`;
+                    log(`Produit ajouté avec succès: ${data.data.nom}`, 'success');
+                } else {
+                    throw new Error(data.message || `Erreur ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('product-result').innerHTML = 
+                    `<div class="error">❌ Erreur: ${error.message}</div>`;
+                log(`Erreur ajout produit: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/produits`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('products-result').innerHTML = 
+                        `<div class="success">✅ ${data.count} produit(s) récupéré(s)</div>`;
+                    log(`${data.count} produits récupérés`, 'success');
+                    
+                    if (data.data.length > 0) {
+                        log(`Dernier produit: ${data.data[data.data.length - 1].nom}`, 'info');
+                    }
+                } else {
+                    throw new Error(`Erreur ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('products-result').innerHTML = 
+                    `<div class="error">❌ Erreur: ${error.message}</div>`;
+                log(`Erreur récupération produits: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAddLead() {
+            const leadData = {
+                nom: "Client Test",
+                email: "test@example.com",
+                telephone: "0123456789",
+                adresse: "123 Rue de Test",
+                ville: "Ville Test",
+                message: "Message de test pour validation",
+                source: "Test Manuel"
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/leads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(leadData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('lead-result').innerHTML = 
+                        `<div class="success">✅ Lead ajouté: ${leadData.nom} (${leadData.ville})</div>`;
+                    log(`Lead ajouté avec succès: ${leadData.nom}`, 'success');
+                } else {
+                    throw new Error(data.message || `Erreur ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('lead-result').innerHTML = 
+                    `<div class="error">❌ Erreur: ${error.message}</div>`;
+                log(`Erreur ajout lead: ${error.message}`, 'error');
+            }
+        }
+
+        // Test automatique au chargement
+        window.onload = function() {
+            log('Page de test chargée', 'info');
+            setTimeout(testHealth, 500);
+        };
+    </script>
+</body>
+</html>

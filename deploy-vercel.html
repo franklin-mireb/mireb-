@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Déployer sur Vercel - Mireb CRM</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background-color: #2563eb;
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #1e40af;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #3b82f6;
+        }
+        .deploy-btn {
+            display: inline-block;
+            background: #000;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            margin: 10px 0;
+            transition: transform 0.2s;
+        }
+        .deploy-btn:hover {
+            transform: scale(1.05);
+        }
+        .step {
+            background-color: #3730a3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #4f46e5;
+        }
+        h1 { text-align: center; }
+        .success { color: #4ade80; }
+        .warning { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Déployer Mireb CRM sur Vercel</h1>
+        
+        <div class="step">
+            <h3>📧 Vos identifiants</h3>
+            <p><strong>Email:</strong> hervinimireb@gmail.com</p>
+            <p><strong>Mot de passe:</strong> fiacre19</p>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Déploiement en 1 clic</h3>
+            <p>Cliquez sur le bouton ci-dessous pour déployer automatiquement :</p>
+            
+            <a href="https://vercel.com/new/clone?repository-url=https://github.com/franklin-mireb/mireb-" 
+               class="deploy-btn" target="_blank">
+                ▶️ DÉPLOYER SUR VERCEL
+            </a>
+        </div>
+
+        <div class="step">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Cliquez sur le bouton "DÉPLOYER SUR VERCEL"</li>
+                <li>Connectez-vous avec GitHub ou vos identifiants</li>
+                <li>Cliquez "Deploy" (tout est pré-configuré)</li>
+                <li>Récupérez l'URL générée</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3 class="success">✅ URLs finales attendues</h3>
+            <ul>
+                <li><strong>Site principal:</strong> https://mireb-xxxx.vercel.app</li>
+                <li><strong>Interface Admin:</strong> https://mireb-xxxx.vercel.app/admin</li>
+                <li><strong>Test API:</strong> https://mireb-xxxx.vercel.app/test</li>
+                <li><strong>Health Check:</strong> https://mireb-xxxx.vercel.app/api/health</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3 class="warning">💡 Avantages Vercel</h3>
+            <ul>
+                <li>✅ Backend API fonctionnel</li>
+                <li>✅ Plus d'erreurs "Failed to fetch"</li>
+                <li>✅ Base de données persistante</li>
+                <li>✅ HTTPS automatique</li>
+                <li>✅ URLs courtes (/admin, /test)</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <p><strong>🎉 En 30 secondes, votre CRM sera en ligne avec backend complet !</strong></p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect après 5 secondes si souhaité
+        console.log('Page de déploiement Vercel chargée');
+    </script>
+</body>
+</html>

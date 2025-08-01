@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "name": "mireb-crm",
+  "routes": [
+    {
+      "src": "/admin",
+      "dest": "/mireb-ai-crm-complete.html"
+    },
+    {
+      "src": "/test",
+      "dest": "/test-backend.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}

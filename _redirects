@@ -1,0 +1,5 @@
+# Redirections pour Mireb CRM
+/admin    /admin-add-product.html    200
+/demo     /admin-add-product-demo.html    200
+/api/*    https://mireb-api.vercel.app/api/:splat    200
+/*        /index.html                200

@@ -1,0 +1,54 @@
+═══════════════════════════════════════════════════════════════
+🔐 CORRECTION VARIABLES GITHUB - AIDE-MÉMOIRE RAPIDE
+═══════════════════════════════════════════════════════════════
+
+🎯 LIEN DIRECT : https://github.com/franklin-mireb/mireb-/settings/secrets/actions
+
+═══════════════════════════════════════════════════════════════
+📋 ACTIONS À EFFECTUER
+═══════════════════════════════════════════════════════════════
+
+🔧 ÉTAPE 1 : Renommer variable existante
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Cliquer sur "OPENAI" dans la liste                      │
+│ 2. Cliquer "Update"                                        │
+│ 3. Changer le nom : OPENAI → OPENAI_API_KEY               │
+│ 4. Cliquer "Update secret"                                 │
+└─────────────────────────────────────────────────────────────┘
+
+➕ ÉTAPE 2 : Ajouter nouvelle variable
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Cliquer "New repository secret"                         │
+│ 2. Name : JWT_SECRET                                       │
+│ 3. Secret : mireb_jwt_secret_2025_franklin_secure_congo_drc │
+│ 4. Cliquer "Add secret"                                    │
+└─────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+✅ RÉSULTAT ATTENDU
+═══════════════════════════════════════════════════════════════
+
+Vous devriez voir 3 variables :
+┌─────────────────────────────────────────────────────────────┐
+│ 🔐 MONGODB_URI        ••••••••••••••••••••••••••••••••••    │
+│ 🔐 OPENAI_API_KEY     ••••••••••••••••••••••••••••••••••    │
+│ 🔐 JWT_SECRET         ••••••••••••••••••••••••••••••••••    │
+└─────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+🧪 APRÈS CORRECTION
+═══════════════════════════════════════════════════════════════
+
+Exécuter ces commandes :
+┌─────────────────────────────────────────────────────────────┐
+│ git commit --allow-empty -m "🔧 Variables GitHub corrigées" │
+│ git push origin main                                        │
+└─────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+⏱️  TEMPS ESTIMÉ : 2 minutes maximum
+🎯 OBJECTIF : Préparer GitHub pour le backend Vercel
+🚀 SUIVANT : Déploiement backend sur Vercel
+
+═══════════════════════════════════════════════════════════════

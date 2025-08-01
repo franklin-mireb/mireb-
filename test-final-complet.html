@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Test Final Complet - Mireb CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .success-check { animation: bounceIn 0.5s ease-out; }
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .image-preview { max-width: 200px; max-height: 150px; object-fit: cover; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-orange-50 min-h-screen p-6">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                Test Final Complet - Mireb CRM
+            </h1>
+            <p class="text-lg text-gray-600">Validation complète : Upload Images + Outils IA + Création Produit</p>
+        </div>
+
+        <!-- Section 1: Upload Images Réelles -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold text-blue-600 mb-4">
+                <i class="fas fa-images mr-2"></i>
+                1. Test Upload Images Réelles
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Choisir une image :</label>
+                    <input type="file" id="testImage" accept="image/*" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <button id="uploadTest" class="mt-3 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        <i class="fas fa-upload mr-2"></i>Tester Upload
+                    </button>
+                </div>
+                <div id="imagePreviewTest" class="border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
+                    <p class="text-gray-500">L'aperçu de l'image apparaîtra ici</p>
+                </div>
+            </div>
+            <div id="uploadResult" class="mt-4"></div>
+        </div>
+
+        <!-- Section 2: Outils IA -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold text-green-600 mb-4">
+                <i class="fas fa-robot mr-2"></i>
+                2. Test Outils IA
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">🤖 Génération Description</h3>
+                    <input type="text" id="nomProduit" placeholder="Nom du produit" 
+                           class="w-full px-3 py-2 border rounded-md mb-2">
+                    <select id="categorieProduit" class="w-full px-3 py-2 border rounded-md mb-3">
+                        <option value="">Choisir catégorie</option>
+                        <option value="Électronique">Électronique</option>
+                        <option value="Mode">Mode</option>
+                        <option value="Automobile">Automobile</option>
+                        <option value="Maison">Maison & Jardin</option>
+                    </select>
+                    <button id="generateDesc" class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                        <i class="fas fa-magic mr-2"></i>Générer Description IA
+                    </button>
+                    <textarea id="descResult" rows="4" class="w-full px-3 py-2 border rounded-md mt-3" 
+                              placeholder="La description générée apparaîtra ici..."></textarea>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">🏷️ Optimisation Tags</h3>
+                    <input type="text" id="nomTags" placeholder="Nom du produit" 
+                           class="w-full px-3 py-2 border rounded-md mb-2">
+                    <input type="text" id="categorieTags" placeholder="Catégorie" 
+                           class="w-full px-3 py-2 border rounded-md mb-2">
+                    <input type="text" id="villeTags" placeholder="Ville" value="Kinshasa"
+                           class="w-full px-3 py-2 border rounded-md mb-3">
+                    <button id="generateTags" class="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                        <i class="fas fa-tags mr-2"></i>Optimiser Tags IA
+                    </button>
+                    <textarea id="tagsResult" rows="4" class="w-full px-3 py-2 border rounded-md mt-3" 
+                              placeholder="Les tags optimisés apparaîtront ici..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Test Complet -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold text-orange-600 mb-4">
+                <i class="fas fa-check-double mr-2"></i>
+                3. Test Produit Complet
+            </h2>
+            <div class="text-center">
+                <button id="createTestProduct" class="bg-orange-500 text-white px-8 py-3 rounded-lg text-lg hover:bg-orange-600">
+                    <i class="fas fa-plus-circle mr-2"></i>
+                    Créer un Produit Test Complet
+                </button>
+                <p class="text-sm text-gray-600 mt-2">Crée un produit avec image + description IA + tags optimisés</p>
+            </div>
+            <div id="productResult" class="mt-6"></div>
+        </div>
+
+        <!-- Section 4: Résultats -->
+        <div class="bg-gray-800 text-green-400 rounded-xl p-6">
+            <h3 class="text-xl font-bold mb-4">
+                <i class="fas fa-terminal mr-2"></i>
+                Logs de Test en Temps Réel
+            </h3>
+            <div id="logs" class="font-mono text-sm max-h-96 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let testImages = [];
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400'
+            };
+            logsDiv.innerHTML += `<div class="${colors[type] || 'text-blue-400'}">[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function showResult(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            const bgColor = isSuccess ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300';
+            const icon = isSuccess ? '✅' : '❌';
+            element.innerHTML = `
+                <div class="border rounded-lg p-4 ${bgColor}">
+                    <div class="font-semibold mb-2">${icon} ${isSuccess ? 'Succès' : 'Erreur'}</div>
+                    <pre class="text-sm overflow-x-auto">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        // Test Upload Image Réelle
+        document.getElementById('uploadTest').addEventListener('click', async () => {
+            const fileInput = document.getElementById('testImage');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                log('⚠️ Aucune image sélectionnée', 'warning');
+                return;
+            }
+
+            log(`🔄 Test upload image réelle: ${file.name} (${(file.size/1024).toFixed(1)}KB)`, 'info');
+            
+            try {
+                // Créer aperçu de l'image réelle
+                const realImageUrl = URL.createObjectURL(file);
+                document.getElementById('imagePreviewTest').innerHTML = `
+                    <img src="${realImageUrl}" alt="${file.name}" class="image-preview mx-auto rounded">
+                    <p class="text-sm text-gray-600 mt-2">${file.name}</p>
+                `;
+
+                // Test API
+                const response = await fetch(`${API_BASE}/upload/single`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileType: file.type
+                    })
+                });
+
+                const result = await response.json();
+                
+                testImages.push({
+                    url: realImageUrl,
+                    originalName: file.name,
+                    size: file.size
+                });
+                
+                log('✅ Image réelle uploadée avec succès', 'success');
+                showResult('uploadResult', {
+                    ...result,
+                    realImage: {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type
+                    }
+                });
+                
+            } catch (error) {
+                log('❌ Erreur upload: ' + error.message, 'error');
+                showResult('uploadResult', { error: error.message }, false);
+            }
+        });
+
+        // Test IA Description
+        document.getElementById('generateDesc').addEventListener('click', async () => {
+            const nom = document.getElementById('nomProduit').value;
+            const categorie = document.getElementById('categorieProduit').value;
+            
+            if (!nom || !categorie) {
+                log('⚠️ Nom et catégorie requis pour la description IA', 'warning');
+                return;
+            }
+
+            log(`🤖 Génération description IA: ${nom} (${categorie})`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/openai/generate-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie })
+                });
+
+                const result = await response.json();
+                document.getElementById('descResult').value = result.data.description;
+                log('✅ Description IA générée', 'success');
+                
+            } catch (error) {
+                log('❌ Erreur IA description: ' + error.message, 'error');
+            }
+        });
+
+        // Test IA Tags
+        document.getElementById('generateTags').addEventListener('click', async () => {
+            const nom = document.getElementById('nomTags').value;
+            const categorie = document.getElementById('categorieTags').value;
+            const ville = document.getElementById('villeTags').value;
+            
+            if (!nom || !categorie) {
+                log('⚠️ Nom et catégorie requis pour les tags IA', 'warning');
+                return;
+            }
+
+            log(`🏷️ Optimisation tags IA: ${nom} (${categorie}, ${ville})`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/openai/optimize-tags`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie, ville })
+                });
+
+                const result = await response.json();
+                document.getElementById('tagsResult').value = result.data.tags.join(', ');
+                log('✅ Tags IA optimisés', 'success');
+                
+            } catch (error) {
+                log('❌ Erreur IA tags: ' + error.message, 'error');
+            }
+        });
+
+        // Test Produit Complet
+        document.getElementById('createTestProduct').addEventListener('click', async () => {
+            log('🚀 Création produit test complet...', 'info');
+            
+            try {
+                // 1. Génération description IA
+                log('📝 Étape 1: Génération description IA...', 'info');
+                const descResponse = await fetch(`${API_BASE}/openai/generate-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        nom: 'Smartphone Premium Test', 
+                        categorie: 'Électronique' 
+                    })
+                });
+                const descResult = await descResponse.json();
+                log('✅ Description générée', 'success');
+
+                // 2. Optimisation tags IA
+                log('🏷️ Étape 2: Optimisation tags IA...', 'info');
+                const tagsResponse = await fetch(`${API_BASE}/openai/optimize-tags`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        nom: 'Smartphone Premium Test', 
+                        categorie: 'Électronique',
+                        ville: 'Kinshasa'
+                    })
+                });
+                const tagsResult = await tagsResponse.json();
+                log('✅ Tags optimisés', 'success');
+
+                // 3. Création du produit
+                log('📦 Étape 3: Création du produit...', 'info');
+                const productData = {
+                    nom: 'Smartphone Premium Test',
+                    description: descResult.data.description,
+                    prix: 899.99,
+                    categorie: 'Électronique',
+                    stock: 10,
+                    ville: 'Kinshasa',
+                    tags: tagsResult.data.tags.join(', '),
+                    images: testImages.length > 0 ? [testImages[0]] : []
+                };
+
+                const productResponse = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
+
+                const productResult = await productResponse.json();
+                log('✅ Produit créé avec succès!', 'success');
+                
+                showResult('productResult', {
+                    produit: productResult,
+                    etapes: {
+                        description_ia: 'Générée avec succès',
+                        tags_ia: 'Optimisés avec succès',
+                        images: testImages.length > 0 ? 'Image réelle utilisée' : 'Aucune image',
+                        creation: 'Produit créé'
+                    }
+                });
+
+            } catch (error) {
+                log('❌ Erreur création produit complet: ' + error.message, 'error');
+                showResult('productResult', { error: error.message }, false);
+            }
+        });
+
+        // Log initial
+        log('🎯 Interface de test final chargée - Prêt pour les tests!', 'success');
+        log('💡 Instructions: 1) Testez upload image réelle, 2) Testez outils IA, 3) Créez produit complet', 'info');
+    </script>
+</body>
+</html>

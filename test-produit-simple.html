@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Produit Mireb - Debug Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h1 class="text-2xl font-bold text-center mb-4">
+                    🧪 Test Produit Mireb - Mode Debug
+                </h1>
+                
+                <!-- Status Connection -->
+                <div id="connectionStatus" class="p-4 rounded-lg mb-4 bg-yellow-50 border border-yellow-200">
+                    <div class="flex items-center justify-between">
+                        <span>Status Backend:</span>
+                        <span id="statusText" class="font-semibold text-yellow-600">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Vérification...
+                        </span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2">
+                        Tentative de connexion à: <span class="font-mono">http://localhost:5001/api</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire Simplifié -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-plus-circle text-green-500 mr-2"></i>
+                    Ajouter un Produit (Test)
+                </h2>
+
+                <form id="productForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Nom du produit *
+                            </label>
+                            <input type="text" id="nom" name="nom" required
+                                value="Test Produit Debug"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Catégorie *
+                            </label>
+                            <select id="categorie" name="categorie" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="Électronique">Électronique</option>
+                                <option value="Mode">Mode</option>
+                                <option value="Automobile">Automobile</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Prix *
+                            </label>
+                            <input type="number" id="prix" name="prix" required
+                                value="99.99" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Stock *
+                            </label>
+                            <input type="number" id="stock" name="stock" required
+                                value="10" min="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Ville
+                            </label>
+                            <select id="ville" name="ville"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="Kinshasa">Kinshasa</option>
+                                <option value="Lubumbashi">Lubumbashi</option>
+                                <option value="Bukavu">Bukavu</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Description *
+                        </label>
+                        <textarea id="description" name="description" required rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">Description du produit de test pour vérifier le fonctionnement de l'API Mireb.</textarea>
+                    </div>
+
+                    <!-- Boutons -->
+                    <div class="flex space-x-4">
+                        <button type="submit" id="submitBtn"
+                            class="flex-1 bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-save mr-2"></i>
+                            <span id="submitText">Créer le Produit</span>
+                        </button>
+                        
+                        <button type="button" onclick="testConnection()"
+                            class="bg-blue-500 text-white py-3 px-4 rounded-md hover:bg-blue-600">
+                            <i class="fas fa-network-wired mr-2"></i>
+                            Test API
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Résultats -->
+            <div id="results" class="mt-6 bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">
+                    <i class="fas fa-clipboard-list text-blue-500 mr-2"></i>
+                    Logs et Résultats
+                </h3>
+                <div id="logsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                <button onclick="clearLogs()" class="mt-4 bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600">
+                    <i class="fas fa-trash mr-2"></i>Effacer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        let isApiConnected = false;
+
+        function addLog(message, type = 'info') {
+            const logsList = document.getElementById('logsList');
+            const div = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-50 border-green-200 text-green-800',
+                error: 'bg-red-50 border-red-200 text-red-800',
+                warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                info: 'bg-blue-50 border-blue-200 text-blue-800'
+            };
+
+            const icons = {
+                success: 'fas fa-check-circle text-green-500',
+                error: 'fas fa-exclamation-circle text-red-500',
+                warning: 'fas fa-exclamation-triangle text-yellow-500',
+                info: 'fas fa-info-circle text-blue-500'
+            };
+            
+            div.className = `p-3 border rounded-lg ${colors[type] || colors.info}`;
+            div.innerHTML = `
+                <div class="flex items-start">
+                    <i class="${icons[type] || icons.info} mr-2 mt-0.5"></i>
+                    <div class="flex-1">
+                        <div class="text-xs text-gray-500 mb-1">${new Date().toLocaleTimeString()}</div>
+                        <div class="text-sm">${message}</div>
+                    </div>
+                </div>
+            `;
+            
+            logsList.appendChild(div);
+            logsList.scrollTop = logsList.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logsList').innerHTML = '';
+        }
+
+        function updateConnectionStatus(connected, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                statusDiv.className = 'p-4 rounded-lg mb-4 bg-green-50 border border-green-200';
+                statusText.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i>Connecté';
+                isApiConnected = true;
+            } else {
+                statusDiv.className = 'p-4 rounded-lg mb-4 bg-red-50 border border-red-200';
+                statusText.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-2"></i>Déconnecté';
+                isApiConnected = false;
+            }
+        }
+
+        async function testConnection() {
+            addLog('🔄 Test de connexion à l\'API...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✅ Connexion réussie! Status: ${data.status}`, 'success');
+                    updateConnectionStatus(true);
+                } else {
+                    addLog(`❌ Connexion échouée. Code: ${response.status}`, 'error');
+                    updateConnectionStatus(false);
+                }
+            } catch (error) {
+                addLog(`💥 Erreur de connexion: ${error.message}`, 'error');
+                updateConnectionStatus(false);
+                
+                // Suggestions de diagnostic
+                addLog(`🔍 Diagnostic:
+• Vérifiez que le serveur backend est démarré sur le port 5001
+• Commande: curl http://localhost:5001/api/health
+• Si curl fonctionne mais pas le navigateur → problème CORS
+• Vérifiez la console navigateur (F12) pour plus de détails`, 'warning');
+            }
+        }
+
+        async function createProduct(productData) {
+            addLog('🔄 Tentative de création du produit...', 'info');
+            addLog(`📤 Données envoyées: ${JSON.stringify(productData, null, 2)}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    addLog(`🎉 SUCCÈS! Produit créé avec l'ID: ${result.data.id}`, 'success');
+                    addLog(`📝 Nom: ${result.data.nom}`, 'success');
+                    addLog(`💰 Prix: $${result.data.prix}`, 'success');
+                    addLog(`📦 Stock: ${result.data.stock} unités`, 'success');
+                    
+                    // Réinitialiser le formulaire après succès
+                    setTimeout(() => {
+                        document.getElementById('productForm').reset();
+                        addLog('🔄 Formulaire réinitialisé pour un nouveau produit', 'info');
+                    }, 2000);
+                    
+                    return true;
+                } else {
+                    addLog(`❌ Échec: ${result.message || 'Erreur inconnue'}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                addLog(`💥 ERREUR CRITIQUE: ${error.message}`, 'error');
+                
+                if (error.message.includes('Failed to fetch')) {
+                    addLog(`🔧 "Failed to fetch" peut indiquer:
+• Serveur backend non démarré
+• Problème de réseau local
+• Bloquage par le navigateur/firewall
+• Configuration CORS incorrecte
+
+💡 Solutions à essayer:
+1. Redémarrer le serveur backend
+2. Vérifier avec curl: curl -X POST http://localhost:5001/api/produits -H "Content-Type: application/json" -d '{"nom":"test","prix":100,"categorie":"Test","stock":5,"description":"test","ville":"Kinshasa"}'
+3. Ouvrir la console navigateur (F12) pour plus de détails`, 'warning');
+                }
+                return false;
+            }
+        }
+
+        // Gestionnaire de formulaire
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const originalText = submitText.textContent;
+            
+            // Désactiver le bouton et changer le texte
+            submitBtn.disabled = true;
+            submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Création en cours...';
+            
+            try {
+                // Collecter les données du formulaire
+                const formData = new FormData(e.target);
+                const productData = {
+                    nom: formData.get('nom'),
+                    categorie: formData.get('categorie'),
+                    prix: parseFloat(formData.get('prix')),
+                    stock: parseInt(formData.get('stock')),
+                    ville: formData.get('ville'),
+                    description: formData.get('description'),
+                    
+                    // Données par défaut
+                    stockMinimum: 5,
+                    adresse: "Adresse de test",
+                    images: [],
+                    tags: ["test", "debug"],
+                    caracteristiques: [],
+                    createdAt: new Date().toISOString(),
+                    createdBy: "Test User"
+                };
+
+                const success = await createProduct(productData);
+                
+            } finally {
+                // Réactiver le bouton
+                submitBtn.disabled = false;
+                submitText.textContent = originalText;
+            }
+        });
+
+        // Test automatique de connexion au chargement
+        window.addEventListener('load', () => {
+            addLog('🚀 Interface de test Mireb chargée', 'info');
+            addLog(`🔗 Configuration API: ${API_BASE}`, 'info');
+            testConnection();
+        });
+    </script>
+</body>
+</html>

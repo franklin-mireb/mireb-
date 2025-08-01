@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion Admin - Mireb CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-orange-400 via-red-400 to-pink-400 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-4">
+        <!-- Card de connexion -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-store text-3xl text-orange-600"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800">Mireb CRM</h1>
+                <p class="text-gray-600 mt-2">Administration Système</p>
+            </div>
+
+            <!-- Formulaire de connexion -->
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-envelope mr-2"></i>Email
+                    </label>
+                    <input type="email" id="email" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="mirebshop@gmail.com"
+                        autocomplete="email">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-2"></i>Mot de passe
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent pr-10"
+                            placeholder="••••••••"
+                            autocomplete="current-password">
+                        <button type="button" id="togglePassword" 
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="loginBtn"
+                    class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-semibold">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Se connecter
+                </button>
+            </form>
+
+            <!-- Informations -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-sm font-semibold text-blue-800 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>Accès Administrateur
+                </h3>
+                <p class="text-xs text-blue-600">
+                    Interface d'administration pour la gestion des produits Mireb Commercial.
+                    Connectez-vous avec vos identifiants administrateur.
+                </p>
+            </div>
+
+            <!-- Version demo -->
+            <div class="mt-4 text-center">
+                <a href="/admin-add-product-demo.html" 
+                   class="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+                    <i class="fas fa-flask mr-1"></i>Accéder à la version démo
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6 text-white text-sm">
+            <p>© 2025 Mireb Commercial - RDC</p>
+        </div>
+    </div>
+
+    <!-- Messages toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', () => {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.getElementById('togglePassword');
+            const icon = toggleBtn.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        });
+
+        // Submit form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // UI Loading
+            const originalText = loginBtn.innerHTML;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Connexion...';
+            loginBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Stocker le token et les infos utilisateur
+                    localStorage.setItem('mireb_token', result.data.token);
+                    localStorage.setItem('mireb_user', JSON.stringify(result.data.user));
+                    
+                    showToast('✅ Connexion réussie! Redirection...', 'success');
+                    
+                    // Redirection vers l'interface admin
+                    setTimeout(() => {
+                        window.location.href = '/admin-add-product.html';
+                    }, 1500);
+                    
+                } else {
+                    showToast('❌ ' + result.message, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                showToast('❌ Erreur de connexion. Vérifiez votre réseau.', 'error');
+            }
+            
+            // Reset UI
+            loginBtn.innerHTML = originalText;
+            loginBtn.disabled = false;
+        });
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            toast.className = `fixed top-4 right-4 z-50 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transition-all duration-300`;
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Vérifier si déjà connecté
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('mireb_token');
+            if (token) {
+                // Vérifier si le token est encore valide
+                fetch(`${API_BASE}/auth/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('Vous êtes déjà connecté. Redirection...', 'info');
+                        setTimeout(() => {
+                            window.location.href = '/admin-add-product.html';
+                        }, 1000);
+                    }
+                })
+                .catch(() => {
+                    // Token invalide, le supprimer
+                    localStorage.removeItem('mireb_token');
+                    localStorage.removeItem('mireb_user');
+                });
+            }
+        });
+
+        // Animation d'entrée
+        window.addEventListener('load', () => {
+            const card = document.querySelector('.bg-white');
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mireb CRM - Tableau de Bord</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <i class="fas fa-store text-3xl text-orange-500 mr-3"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">Mireb CRM</h1>
+                        <p class="text-sm text-gray-600">Système de Gestion Commerciale</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="userInfo" class="text-right">
+                        <div class="text-sm text-gray-600">Connecté en tant que:</div>
+                        <div class="font-semibold text-gray-800" id="userName">Chargement...</div>
+                    </div>
+                    <button id="logoutBtn" 
+                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Message de bienvenue -->
+        <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-6 mb-8">
+            <h2 class="text-3xl font-bold mb-2">
+                <i class="fas fa-home mr-3"></i>
+                Bienvenue dans votre CRM
+            </h2>
+            <p class="text-lg opacity-90">Tableau de bord administrateur - Système authentifié</p>
+        </div>
+
+        <!-- Statistiques rapides -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-box text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Produits</p>
+                        <p class="text-2xl font-bold" id="totalProducts">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Statut API</p>
+                        <p class="text-lg font-bold text-green-600" id="apiStatus">Connectée</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-robot text-purple-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Outils IA</p>
+                        <p class="text-lg font-bold text-purple-600">Actifs</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="bg-orange-100 p-3 rounded-full">
+                        <i class="fas fa-shield-alt text-orange-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-600">Sécurité</p>
+                        <p class="text-lg font-bold text-orange-600">Authentifié</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions principales -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Ajouter Produit -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-plus-circle text-2xl text-orange-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Ajouter un Produit</h3>
+                    <p class="text-gray-600 mb-6">Créer un nouveau produit avec images et IA</p>
+                    <a href="/admin-add-product.html" 
+                       class="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors inline-block">
+                        <i class="fas fa-arrow-right mr-2"></i>Commencer
+                    </a>
+                </div>
+            </div>
+
+            <!-- Gérer Produits -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-list text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Gérer les Produits</h3>
+                    <p class="text-gray-600 mb-6">Voir, modifier, supprimer les produits</p>
+                    <button onclick="showProducts()" 
+                       class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-arrow-right mr-2"></i>Voir la liste
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tests & Diagnostic -->
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-vial text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Tests & Diagnostic</h3>
+                    <p class="text-gray-600 mb-6">Vérifier le bon fonctionnement</p>
+                    <a href="/test-final-complet.html" 
+                       class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors inline-block">
+                        <i class="fas fa-arrow-right mr-2"></i>Lancer tests
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des produits -->
+        <div id="productsSection" class="mt-8 hidden">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-box mr-2"></i>Produits Récents
+                </h3>
+                <div id="productsList" class="space-y-3">
+                    <!-- Les produits seront chargés ici -->
+                </div>
+                <button onclick="hideProducts()" 
+                    class="mt-4 text-gray-500 hover:text-gray-700 text-sm">
+                    <i class="fas fa-times mr-1"></i>Masquer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentUser = null;
+
+        // Vérification de l'authentification
+        function checkAuthentication() {
+            const token = localStorage.getItem('mireb_token');
+            const user = localStorage.getItem('mireb_user');
+            
+            if (!token || !user) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            try {
+                currentUser = JSON.parse(user);
+                document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+                return true;
+            } catch (error) {
+                console.error('Erreur parsing user data:', error);
+                localStorage.removeItem('mireb_token');
+                localStorage.removeItem('mireb_user');
+                window.location.href = '/login.html';
+                return false;
+            }
+        }
+
+        // Déconnexion
+        function logout() {
+            localStorage.removeItem('mireb_token');
+            localStorage.removeItem('mireb_user');
+            showToast('Déconnexion réussie', 'info');
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 1000);
+        }
+
+        // Charger les statistiques
+        async function loadStats() {
+            try {
+                // Produits
+                const productsResponse = await fetch(`${API_BASE}/produits`);
+                const productsData = await productsResponse.json();
+                
+                if (productsData.success) {
+                    document.getElementById('totalProducts').textContent = productsData.pagination.total;
+                }
+
+                // Statut API
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                const healthData = await healthResponse.json();
+                
+                if (healthData.status === 'OK') {
+                    document.getElementById('apiStatus').textContent = 'Connectée';
+                    document.getElementById('apiStatus').className = 'text-lg font-bold text-green-600';
+                } else {
+                    throw new Error('API non disponible');
+                }
+                
+            } catch (error) {
+                console.error('Erreur chargement stats:', error);
+                document.getElementById('apiStatus').textContent = 'Erreur';
+                document.getElementById('apiStatus').className = 'text-lg font-bold text-red-600';
+                document.getElementById('totalProducts').textContent = '?';
+            }
+        }
+
+        // Afficher les produits
+        async function showProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/produits`);
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    const productsList = document.getElementById('productsList');
+                    productsList.innerHTML = '';
+                    
+                    data.data.forEach(product => {
+                        const productDiv = document.createElement('div');
+                        productDiv.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg';
+                        productDiv.innerHTML = `
+                            <div>
+                                <h4 class="font-semibold">${product.nom}</h4>
+                                <p class="text-sm text-gray-600">${product.categorie} - ${product.prix}$</p>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                Stock: ${product.stock}
+                            </div>
+                        `;
+                        productsList.appendChild(productDiv);
+                    });
+                    
+                    document.getElementById('productsSection').classList.remove('hidden');
+                } else {
+                    showToast('Aucun produit trouvé', 'info');
+                }
+                
+            } catch (error) {
+                console.error('Erreur chargement produits:', error);
+                showToast('Erreur lors du chargement des produits', 'error');
+            }
+        }
+
+        // Masquer les produits
+        function hideProducts() {
+            document.getElementById('productsSection').classList.add('hidden');
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            toast.className = `fixed top-4 right-4 z-50 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg transition-all duration-300`;
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Événements
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                logout();
+            }
+        });
+
+        // Initialisation
+        window.addEventListener('load', async () => {
+            if (!checkAuthentication()) {
+                return;
+            }
+            
+            showToast(`Bienvenue ${currentUser.name}!`, 'success');
+            await loadStats();
+        });
+    </script>
+</body>
+</html>

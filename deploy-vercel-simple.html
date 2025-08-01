@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Déployer Mireb CRM sur Vercel</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background-color: #f0f9ff;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .deploy-btn {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 15px 0;
+            transition: background-color 0.2s;
+        }
+        .deploy-btn:hover {
+            background-color: #1d4ed8;
+        }
+        .step {
+            background-color: #f8fafc;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
+        h1 { 
+            text-align: center; 
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        h3 { 
+            color: #374151; 
+            margin-top: 0;
+        }
+        .credentials {
+            background-color: #fef3c7;
+            border: 2px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .success { 
+            color: #059669; 
+            font-weight: bold;
+        }
+        .warning { 
+            color: #d97706; 
+            font-weight: bold;
+        }
+        ul, ol {
+            padding-left: 20px;
+        }
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Déployer Mireb CRM sur Vercel</h1>
+        
+        <div class="credentials">
+            <h3>📧 Vos identifiants Vercel</h3>
+            <p><strong>Email:</strong> hervinimireb@gmail.com</p>
+            <p><strong>Mot de passe:</strong> fiacre19</p>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Déploiement automatique en 1 clic</h3>
+            <p>Cliquez sur le bouton ci-dessous pour déployer votre CRM automatiquement sur Vercel :</p>
+            
+            <a href="https://vercel.com/new/clone?repository-url=https://github.com/franklin-mireb/mireb-" 
+               class="deploy-btn" target="_blank">
+                ▶️ DÉPLOYER SUR VERCEL MAINTENANT
+            </a>
+            
+            <p><small>⚠️ Une nouvelle fenêtre va s'ouvrir. Utilisez vos identifiants ci-dessus pour vous connecter.</small></p>
+        </div>
+
+        <div class="step">
+            <h3>📋 Instructions détaillées</h3>
+            <ol>
+                <li><strong>Cliquez</strong> sur le bouton "DÉPLOYER SUR VERCEL"</li>
+                <li><strong>Connectez-vous</strong> avec vos identifiants :
+                    <ul>
+                        <li>Email: hervinimireb@gmail.com</li>
+                        <li>Mot de passe: fiacre19</li>
+                    </ul>
+                </li>
+                <li><strong>Cliquez "Deploy"</strong> (la configuration est automatique)</li>
+                <li><strong>Attendez 1-2 minutes</strong> pendant le déploiement</li>
+                <li><strong>Récupérez l'URL</strong> générée par Vercel</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3 class="success">✅ URLs finales que vous obtiendrez</h3>
+            <ul>
+                <li><strong>Site principal:</strong> https://mireb-xxxx.vercel.app</li>
+                <li><strong>Interface Admin:</strong> https://mireb-xxxx.vercel.app/admin</li>
+                <li><strong>Test API:</strong> https://mireb-xxxx.vercel.app/test</li>
+                <li><strong>Vérification santé:</strong> https://mireb-xxxx.vercel.app/api/health</li>
+            </ul>
+            <p><small>(Le "xxxx" sera remplacé par un identifiant unique généré par Vercel)</small></p>
+        </div>
+
+        <div class="step">
+            <h3 class="warning">💡 Pourquoi déployer sur Vercel ?</h3>
+            <ul>
+                <li>✅ <strong>Backend API fonctionnel</strong> - Plus d'erreurs "Failed to fetch"</li>
+                <li>✅ <strong>Base de données persistante</strong> - Vos données sont sauvegardées</li>
+                <li>✅ <strong>HTTPS automatique</strong> - Sécurité garantie</li>
+                <li>✅ <strong>URLs courtes</strong> - /admin, /test</li>
+                <li>✅ <strong>Performance optimale</strong> - Chargement rapide</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background-color: #ecfdf5; border-radius: 8px;">
+            <h3 class="success">🎉 Résultat final</h3>
+            <p><strong>En 2 minutes, votre CRM sera en ligne avec backend complet !</strong></p>
+            <p>Vous aurez un CRM professionnel accessible partout dans le monde.</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <p><small>Si vous avez des problèmes, le CRM fonctionne déjà sur : 
+            <a href="https://franklin-mireb.github.io/mireb-/mireb-ai-crm-complete.html" target="_blank">
+                GitHub Pages
+            </a></small></p>
+        </div>
+    </div>
+
+    <script>
+        console.log('Page de déploiement Vercel chargée avec succès');
+        
+        // Vérifier que tous les éléments sont visibles
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM chargé');
+            const container = document.querySelector('.container');
+            if (container) {
+                console.log('Container trouvé et visible');
+            } else {
+                console.error('Problème: Container non trouvé');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules
+.env
+.git
+server-local.cjs
+server.log
+nohup.out
+*.md

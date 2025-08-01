@@ -1,0 +1,33 @@
+{
+  "produits": [
+    {
+      "id": "1753969653911",
+      "nom": "Produit Test API",
+      "description": "Description test via API",
+      "prix": 49.99,
+      "categorie": "Test",
+      "tags": [
+        "api",
+        "test"
+      ],
+      "image": "https://via.placeholder.com/300x200",
+      "stock": 5,
+      "statut": "actif",
+      "createdAt": "2025-07-31T13:47:33.911Z",
+      "updatedAt": "2025-07-31T13:47:33.911Z"
+    }
+  ],
+  "leads": [],
+  "analytics": {
+    "views": 0,
+    "totalLeads": 0,
+    "conversions": 0,
+    "conversionRate": 0,
+    "leadsByStatus": {
+      "nouveau": 0,
+      "en_cours": 0,
+      "converti": 0,
+      "perdu": 0
+    }
+  }
+}

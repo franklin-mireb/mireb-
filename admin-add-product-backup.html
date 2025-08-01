@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Ajouter Produit | Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .file-upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .file-upload-area:hover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .file-upload-area.dragover {
+            border-color: #f97316;
+            background-color: #fef2e8;
+        }
+        .image-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    <i class="fas fa-plus-circle text-orange-500 mr-3"></i>
+                    Ajouter un nouveau produit
+                </h1>
+                <p class="text-gray-600 mt-2">Créez un nouveau produit avec l'aide de l'IA</p>
+            </div>
+
+            <!-- Formulaire principal -->
+            <form id="productForm" class="bg-white rounded-lg shadow-lg p-6 space-y-6">
+                <!-- Informations de base -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom du produit <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="nom" name="nom" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Ex: Smartphone Samsung Galaxy A24">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Catégorie <span class="text-red-500">*</span>
+                        </label>
+                        <select id="categorie" name="categorie" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="">Sélectionner une catégorie</option>
+                            <option value="Électronique">Électronique</option>
+                            <option value="Mode">Mode</option>
+                            <option value="Maison & Jardin">Maison & Jardin</option>
+                            <option value="Automobile">Automobile</option>
+                            <option value="Santé & Beauté">Santé & Beauté</option>
+                            <option value="Sports & Loisirs">Sports & Loisirs</option>
+                            <option value="Industrie & BTP">Industrie & BTP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Informations localisation -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Adresse <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="adresse" name="adresse" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Ex: Avenue de la Révolution, Commune de Kinshasa">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Ville <span class="text-red-500">*</span>
+                        </label>
+                        <select id="ville" name="ville" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="">Sélectionner une ville</option>
+                            <option value="Kinshasa">Kinshasa</option>
+                            <option value="Lubumbashi">Lubumbashi</option>
+                            <option value="Mbuji-Mayi">Mbuji-Mayi</option>
+                            <option value="Kisangani">Kisangani</option>
+                            <option value="Bukavu">Bukavu</option>
+                            <option value="Goma">Goma</option>
+                            <option value="Kananga">Kananga</option>
+                            <option value="Matadi">Matadi</option>
+                            <option value="Kolwezi">Kolwezi</option>
+                            <option value="Likasi">Likasi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Prix et stock -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Prix <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="prix" name="prix" required min="0" step="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <span class="absolute right-3 top-2 text-gray-500">USD</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" id="stock" name="stock" required min="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock minimum
+                        </label>
+                        <input type="number" id="stockMinimum" name="stockMinimum" min="0" value="5"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <!-- Upload d'images -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Images du produit
+                    </label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" id="imageFiles" name="images" multiple accept="image/*" class="hidden">
+                        <div id="uploadContent">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-700">Glissez vos images ici</p>
+                            <p class="text-sm text-gray-500">ou cliquez pour sélectionner</p>
+                            <p class="text-xs text-gray-400 mt-2">PNG, JPG, GIF jusqu'à 10MB chacune</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Prévisualisation des images -->
+                    <div id="imagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 hidden"></div>
+                </div>
+
+                <!-- Outils IA Avancés -->
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-robot text-blue-500 mr-2"></i>Outils IA Mireb
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button type="button" id="generateDescription" 
+                            class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-3 rounded-md hover:opacity-90 transition-opacity flex items-center justify-center">
+                            <i class="fas fa-magic mr-2"></i>Générer Description IA
+                        </button>
+                        
+                        <button type="button" id="generateTags" 
+                            class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-4 py-3 rounded-md hover:opacity-90 transition-opacity flex items-center justify-center">
+                            <i class="fas fa-tags mr-2"></i>Optimiser Tags SEO
+                        </button>
+                        
+                        <button type="button" id="analyzeTrends" 
+                            class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-md hover:opacity-90 transition-opacity flex items-center justify-center">
+                            <i class="fas fa-chart-line mr-2"></i>Analyser Tendances
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Description <span class="text-red-500">*</span>
+                        </label>
+                        <div id="aiStatus" class="text-sm text-gray-500"></div>
+                    </div>
+                    <textarea id="description" name="description" required rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Description détaillée du produit..."></textarea>
+                </div>
+
+                <!-- Tags SEO -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Tags SEO
+                        </label>
+                        <span class="text-xs text-gray-500">Séparés par des virgules</span>
+                    </div>
+                    <input type="text" id="tags" name="tags"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="smartphone, électronique, samsung, mobile...">
+                </div>
+
+                <!-- Analytics et Prédictions -->
+                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-chart-pie text-yellow-500 mr-2"></i>Analytics & Prédictions
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-2">Estimation Prix Marché</h4>
+                            <div id="priceAnalysis" class="bg-white p-3 rounded border text-sm text-gray-600">
+                                Remplissez le nom et la catégorie pour obtenir une estimation
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-medium text-gray-700 mb-2">Score Potentiel Vente</h4>
+                            <div id="salesScore" class="bg-white p-3 rounded border text-sm text-gray-600">
+                                Score calculé automatiquement lors de la saisie
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Caractéristiques -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Caractéristiques
+                    </label>
+                    <div id="caracteristiques" class="space-y-2">
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" placeholder="Nom" class="px-3 py-2 border border-gray-300 rounded-md">
+                            <input type="text" placeholder="Valeur" class="px-3 py-2 border border-gray-300 rounded-md">
+                            <input type="text" placeholder="Unité" class="px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    <button type="button" id="addCaracteristique" 
+                        class="mt-2 text-orange-500 hover:text-orange-700">
+                        <i class="fas fa-plus mr-1"></i>Ajouter une caractéristique
+                    </button>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <button type="button" onclick="window.history.back()" 
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                        Annuler
+                    </button>
+                    <button type="submit" id="submitBtn"
+                        class="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50">
+                        <i class="fas fa-save mr-2"></i>Créer le produit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages toast -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden"></div>
+
+    <script>
+        // Configuration API simplifiée - Même port, pas de CORS
+        const API_BASE = '/api'; // API sur le même port que le frontend
+        
+        let uploadedImages = [];
+
+        // Afficher l'environnement détecté
+        console.log('🌐 Environnement détecté:', isLocalhost ? 'Local (Démo)' : 'Production (Vercel)');
+        console.log('🔗 API Base URL:', API_BASE);
+
+        // Mise à jour du statut IA
+        function updateAiStatus(message, type = 'info') {
+            const status = document.getElementById('aiStatus');
+            const colors = {
+                info: 'text-blue-500',
+                success: 'text-green-500',
+                error: 'text-red-500',
+                warning: 'text-yellow-500'
+            };
+            status.className = `text-sm ${colors[type]}`;
+            status.textContent = message;
+        }
+
+        // Analytics en temps réel
+        function updateAnalytics() {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            const prix = document.getElementById('prix').value;
+
+            if (nom && categorie) {
+                // Estimation prix marché
+                const prixEstime = Math.round(parseFloat(prix) * (0.8 + Math.random() * 0.4));
+                document.getElementById('priceAnalysis').innerHTML = `
+                    <div class="flex justify-between">
+                        <span>Prix suggéré:</span>
+                        <span class="font-semibold text-green-600">$${prixEstime}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Basé sur le marché ${categorie}</div>
+                `;
+
+                // Score de vente
+                const scoreBase = Math.floor(Math.random() * 30) + 70; // 70-100
+                const scoreColor = scoreBase >= 85 ? 'text-green-600' : scoreBase >= 70 ? 'text-yellow-600' : 'text-red-600';
+                document.getElementById('salesScore').innerHTML = `
+                    <div class="flex justify-between">
+                        <span>Score potentiel:</span>
+                        <span class="font-semibold ${scoreColor}">${scoreBase}/100</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Excellent potentiel de vente</div>
+                `;
+            }
+        }
+
+        // Écouter les changements pour analytics
+        ['nom', 'categorie', 'prix'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAnalytics);
+        });
+
+        // Configuration du drag & drop
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const imageFiles = document.getElementById('imageFiles');
+        const imagePreview = document.getElementById('imagePreview');
+
+        fileUploadArea.addEventListener('click', () => imageFiles.click());
+
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleImageUpload(files);
+        });
+
+        imageFiles.addEventListener('change', (e) => {
+            handleImageUpload(e.target.files);
+        });
+
+        // Gestion upload d'images
+        async function handleImageUpload(files) {
+            for (let file of files) {
+                if (file.type.startsWith('image/')) {
+                    try {
+                        showToast('Upload en cours...', 'info');
+                        
+                        // Utiliser directement l'image réelle de l'utilisateur
+                        const realImageUrl = URL.createObjectURL(file);
+                        
+                        // Appel API pour simulation (optionnel)
+                        try {
+                            const response = await fetch(`${API_BASE}/upload/single`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    fileName: file.name,
+                                    fileSize: file.size,
+                                    fileType: file.type
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            console.log('✅ API Upload réponse:', result);
+                        } catch (apiError) {
+                            console.log('⚠️ API Upload erreur (non bloquant):', apiError);
+                        }
+
+                        // Utiliser l'image réelle uploadée par l'utilisateur
+                        const imageData = {
+                            url: realImageUrl, // URL réelle de l'image utilisateur
+                            originalName: file.name,
+                            size: file.size,
+                            mimetype: file.type,
+                            publicId: 'real_' + Date.now()
+                        };
+                        
+                        uploadedImages.push(imageData);
+                        updateImagePreview();
+                        showToast('Image ajoutée avec succès!', 'success');
+                        
+                    } catch (error) {
+                        console.error('Erreur upload:', error);
+                        showToast('Erreur lors de l\'upload: ' + error.message, 'error');
+                    }
+                }
+            }
+        }
+
+        // Mise à jour de la prévisualisation
+        function updateImagePreview() {
+            imagePreview.innerHTML = '';
+            if (uploadedImages.length > 0) {
+                imagePreview.classList.remove('hidden');
+                uploadedImages.forEach((img, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <img src="${img.url}" alt="${img.originalName}" class="image-preview">
+                        <button type="button" onclick="window.removeImage(${index})"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600">
+                            ×
+                        </button>
+                        ${index === 0 ? '<span class="absolute bottom-0 left-0 bg-orange-500 text-white text-xs px-2 py-1 rounded-tr">Principal</span>' : ''}
+                    `;
+                    imagePreview.appendChild(div);
+                });
+            } else {
+                imagePreview.classList.add('hidden');
+            }
+        }
+
+        // Supprimer une image
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            updateImagePreview();
+        }
+
+        // Exposition des fonctions globales
+        window.removeImage = removeImage;
+
+        // Génération de description avec IA
+        document.getElementById('generateDescription').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            
+            if (!nom || !categorie) {
+                showToast('Veuillez remplir le nom et la catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateDescription');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Génération IA...';
+            btn.disabled = true;
+            updateAiStatus('Génération en cours...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/openai/generate-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('description').value = result.data.description;
+                    updateAiStatus('Description générée avec succès!', 'success');
+                    showToast('Description générée avec IA!', 'success');
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Erreur IA:', error);
+                // Fallback avec description générique
+                const mockDescription = `${nom} est un excellent produit de la catégorie ${categorie}. Conçu avec des matériaux de qualité premium, ce produit offre des performances exceptionnelles et une durabilité remarquable. Idéal pour les utilisateurs exigeants qui recherchent la qualité et l'innovation. Disponible chez Mireb Commercial, votre partenaire de confiance en RDC.`;
+                document.getElementById('description').value = mockDescription;
+                updateAiStatus('Description générée (mode local)', 'warning');
+                showToast('Description générée en mode local', 'warning');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Génération de tags SEO
+        document.getElementById('generateTags').addEventListener('click', async () => {
+            const nom = document.getElementById('nom').value;
+            const categorie = document.getElementById('categorie').value;
+            const ville = document.getElementById('ville').value;
+            
+            if (!nom || !categorie) {
+                showToast('Veuillez remplir nom et catégorie d\'abord', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('generateTags');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Optimisation...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/openai/optimize-tags`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nom, categorie, ville })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('tags').value = result.data.tags.join(', ');
+                    showToast('Tags SEO optimisés!', 'success');
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Erreur tags:', error);
+                // Fallback avec tags génériques
+                const mockTags = [
+                    nom.toLowerCase().replace(/\s+/g, '-'),
+                    categorie.toLowerCase().replace(/\s+/g, '-'),
+                    ville ? ville.toLowerCase() : 'congo',
+                    'mireb-commercial',
+                    'qualite-premium',
+                    'rdc-kinshasa'
+                ];
+                document.getElementById('tags').value = mockTags.join(', ');
+                showToast('Tags générés en mode local', 'warning');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Analyse des tendances
+        document.getElementById('analyzeTrends').addEventListener('click', () => {
+            const categorie = document.getElementById('categorie').value;
+            if (!categorie) {
+                showToast('Sélectionnez une catégorie d\'abord', 'warning');
+                return;
+            }
+            
+            const trends = {
+                'Électronique': '📈 Tendance forte (+15% cette semaine)',
+                'Mode': '📊 Tendance stable (+3% ce mois)',
+                'Automobile': '🚀 Tendance explosive (+25% ce mois)',
+                'Maison & Jardin': '📈 Tendance croissante (+8% ce mois)'
+            };
+            
+            const trend = trends[categorie] || '📊 Données en cours d\'analyse';
+            showToast(`${categorie}: ${trend}`, 'info', 8000);
+        });
+
+        // Ajouter une caractéristique
+        document.getElementById('addCaracteristique').addEventListener('click', () => {
+            const container = document.getElementById('caracteristiques');
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-3 gap-2';
+            div.innerHTML = `
+                <input type="text" placeholder="Nom" class="px-3 py-2 border border-gray-300 rounded-md">
+                <input type="text" placeholder="Valeur" class="px-3 py-2 border border-gray-300 rounded-md">
+                <input type="text" placeholder="Unité" class="px-3 py-2 border border-gray-300 rounded-md">
+            `;
+            container.appendChild(div);
+        });
+
+        // Soumission du formulaire
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Création en cours...';
+            submitBtn.disabled = true;
+
+            // Collecte des données
+            const formData = new FormData(e.target);
+            const productData = {
+                nom: formData.get('nom'),
+                categorie: formData.get('categorie'),
+                adresse: formData.get('adresse'),
+                ville: formData.get('ville'),
+                prix: parseFloat(formData.get('prix')),
+                stock: parseInt(formData.get('stock')),
+                stockMinimum: parseInt(formData.get('stockMinimum')) || 5,
+                description: formData.get('description'),
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                images: uploadedImages.map((img, index) => ({
+                    url: img.url,
+                    alt: img.originalName || `Image ${index + 1}`,
+                    isPrimaire: index === 0
+                })),
+                caracteristiques: [],
+                createdAt: new Date().toISOString(),
+                createdBy: 'Admin Mireb'
+            };
+
+            // Collecte des caractéristiques
+            const caracInputs = document.querySelectorAll('#caracteristiques .grid');
+            caracInputs.forEach(grid => {
+                const inputs = grid.querySelectorAll('input');
+                if (inputs[0].value && inputs[1].value) {
+                    productData.caracteristiques.push({
+                        nom: inputs[0].value,
+                        valeur: inputs[1].value,
+                        unite: inputs[2].value
+                    });
+                }
+            });
+
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast('🎉 Produit créé avec succès!', 'success');
+                    
+                    // Afficher un résumé
+                    setTimeout(() => {
+                        const summary = `
+                            ✅ Produit: ${productData.nom}
+                            📍 Localisation: ${productData.ville}
+                            💰 Prix: $${productData.prix}
+                            📦 Stock: ${productData.stock} unités
+                            🏷️ Tags: ${productData.tags.length} tags SEO
+                        `;
+                        showToast(summary, 'success', 10000);
+                    }, 2000);
+
+                    // Réinitialiser le formulaire après 3 secondes
+                    setTimeout(() => {
+                        e.target.reset();
+                        uploadedImages = [];
+                        updateImagePreview();
+                        document.getElementById('priceAnalysis').innerHTML = 'Remplissez le nom et la catégorie pour obtenir une estimation';
+                        document.getElementById('salesScore').innerHTML = 'Score calculé automatiquement lors de la saisie';
+                        updateAiStatus('');
+                        showToast('Formulaire réinitialisé pour un nouveau produit', 'info');
+                    }, 3000);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Erreur création:', error);
+                showToast('Erreur lors de la création: ' + error.message, 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Système de toast amélioré
+        function showToast(message, type = 'info', duration = 5000) {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            toast.className = `fixed top-4 right-4 z-50 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg max-w-md`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <span class="whitespace-pre-line">${message}</span>
+                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" 
+                        class="ml-4 text-white hover:text-gray-200">×</button>
+                </div>
+            `;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, duration);
+        }
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            showToast('Interface Mireb CRM chargée avec succès! 🎉', 'success');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mireb CRM - Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .debug-info {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Mireb CRM - Test de Debug</h1>
+    
+    <div class="debug-info">
+        <h2>📊 État du déploiement GitHub Pages</h2>
+        <p class="success">✅ Page HTML chargée avec succès</p>
+        <p class="success">✅ CSS appliqué correctement</p>
+        <p class="success">✅ JavaScript de base fonctionne</p>
+    </div>
+
+    <div class="debug-info">
+        <h2>🧪 Tests de chargement des ressources</h2>
+        <div id="react-test">⏳ Test React en cours...</div>
+        <div id="babel-test">⏳ Test Babel en cours...</div>
+        <div id="tailwind-test">⏳ Test Tailwind en cours...</div>
+    </div>
+
+    <div class="debug-info">
+        <h2>🔗 Liens rapides</h2>
+        <p><a href="./mireb-ai-crm-complete.html" style="color: #4CAF50;">👉 Application principale</a></p>
+        <p><a href="./manifest.json" style="color: #4CAF50;">📱 Manifest PWA</a></p>
+        <p><a href="./sw.js" style="color: #4CAF50;">⚙️ Service Worker</a></p>
+    </div>
+
+    <div class="debug-info">
+        <h2>📱 Informations navigateur</h2>
+        <p>User Agent: <span id="user-agent"></span></p>
+        <p>URL actuelle: <span id="current-url"></span></p>
+        <p>Heure: <span id="current-time"></span></p>
+    </div>
+
+    <script>
+        // Test JavaScript de base
+        console.log('🚀 Debug page loaded successfully');
+        
+        // Afficher informations navigateur
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('current-time').textContent = new Date().toLocaleString();
+
+        // Test React
+        setTimeout(() => {
+            if (typeof React !== 'undefined') {
+                document.getElementById('react-test').innerHTML = '<span class="success">✅ React chargé</span>';
+            } else {
+                document.getElementById('react-test').innerHTML = '<span class="error">❌ React non disponible</span>';
+            }
+        }, 2000);
+
+        // Test Babel
+        setTimeout(() => {
+            if (typeof Babel !== 'undefined') {
+                document.getElementById('babel-test').innerHTML = '<span class="success">✅ Babel chargé</span>';
+            } else {
+                document.getElementById('babel-test').innerHTML = '<span class="error">❌ Babel non disponible</span>';
+            }
+        }, 3000);
+
+        // Test Tailwind CSS
+        setTimeout(() => {
+            const testDiv = document.createElement('div');
+            testDiv.className = 'bg-blue-500';
+            document.body.appendChild(testDiv);
+            const styles = window.getComputedStyle(testDiv);
+            
+            if (styles.backgroundColor === 'rgb(59, 130, 246)') {
+                document.getElementById('tailwind-test').innerHTML = '<span class="success">✅ Tailwind CSS actif</span>';
+            } else {
+                document.getElementById('tailwind-test').innerHTML = '<span class="warning">⚠️ Tailwind CSS peut avoir des problèmes</span>';
+            }
+            
+            document.body.removeChild(testDiv);
+        }, 4000);
+
+        // Test de redirection automatique après 10 secondes
+        setTimeout(() => {
+            if (confirm('🚀 Voulez-vous être redirigé vers l\'application principale ?')) {
+                window.location.href = './mireb-ai-crm-complete.html';
+            }
+        }, 10000);
+    </script>
+
+    <!-- Test chargement des CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</body>
+</html>

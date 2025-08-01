@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CORS et Fetch - Mireb</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">🔍 Diagnostic CORS et Fetch</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Configuration -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Configuration</h2>
+                <div class="space-y-2 text-sm">
+                    <div>Frontend: <span class="font-mono">http://localhost:8000</span></div>
+                    <div>Backend: <span class="font-mono">http://localhost:5001</span></div>
+                    <div>Status: <span id="connectionStatus" class="font-semibold text-yellow-600">Vérification...</span></div>
+                </div>
+            </div>
+
+            <!-- Tests Basiques -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Tests Basiques</h2>
+                <div class="space-y-2">
+                    <button onclick="testBasicFetch()" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                        Test Fetch Basique
+                    </button>
+                    <button onclick="testCORS()" class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+                        Test CORS
+                    </button>
+                    <button onclick="testPOST()" class="w-full bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600">
+                        Test POST Produit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tests Détaillés -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Tests Détaillés</h2>
+                <div class="space-y-2">
+                    <button onclick="testWithXMLHttpRequest()" class="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
+                        Test XMLHttpRequest
+                    </button>
+                    <button onclick="testPreflight()" class="w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600">
+                        Test Preflight OPTIONS
+                    </button>
+                    <button onclick="testHeaders()" class="w-full bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600">
+                        Test Headers
+                    </button>
+                </div>
+            </div>
+
+            <!-- Résultats -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Résultats</h2>
+                <div id="results" class="space-y-2 text-sm max-h-64 overflow-y-auto"></div>
+                <button onclick="clearResults()" class="mt-4 bg-gray-500 text-white py-1 px-3 rounded hover:bg-gray-600">
+                    Effacer
+                </button>
+            </div>
+        </div>
+
+        <!-- Test Simulé Interface Produit -->
+        <div class="mt-8 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">🧪 Test Interface Produit Simulée</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Nom du produit</label>
+                    <input type="text" id="productName" value="Test Produit Debug" 
+                           class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Prix</label>
+                    <input type="number" id="productPrice" value="99.99" 
+                           class="w-full px-3 py-2 border rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Catégorie</label>
+                    <select id="productCategory" class="w-full px-3 py-2 border rounded-md">
+                        <option value="Électronique">Électronique</option>
+                        <option value="Mode">Mode</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Stock</label>
+                    <input type="number" id="productStock" value="10" 
+                           class="w-full px-3 py-2 border rounded-md">
+                </div>
+            </div>
+            <div class="mt-4">
+                <button onclick="simulateProductCreation()" 
+                        class="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600">
+                    🚀 Simuler Ajout Produit (Comme dans l'interface)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            const colors = {
+                success: 'text-green-600 bg-green-50',
+                error: 'text-red-600 bg-red-50',
+                info: 'text-blue-600 bg-blue-50',
+                warning: 'text-yellow-600 bg-yellow-50'
+            };
+            
+            div.className = `p-2 rounded border ${colors[type] || colors.info}`;
+            div.innerHTML = `
+                <div class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</div>
+                <div>${message}</div>
+            `;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testBasicFetch() {
+            addResult('🔄 Test fetch basique vers /api/health...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Fetch basique réussi: ${data.message}`, 'success');
+                    document.getElementById('connectionStatus').textContent = '🟢 Connecté';
+                    document.getElementById('connectionStatus').className = 'font-semibold text-green-600';
+                } else {
+                    addResult(`❌ Fetch basique échoué: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`💥 Erreur fetch basique: ${error.message}`, 'error');
+                document.getElementById('connectionStatus').textContent = '🔴 Erreur';
+                document.getElementById('connectionStatus').className = 'font-semibold text-red-600';
+            }
+        }
+
+        async function testCORS() {
+            addResult('🔄 Test CORS avec headers personnalisés...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                addResult(`✅ CORS réussi: ${data.status}`, 'success');
+            } catch (error) {
+                addResult(`❌ CORS échoué: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPOST() {
+            addResult('🔄 Test POST vers /api/produits...', 'info');
+            try {
+                const testProduct = {
+                    nom: "Produit Test CORS",
+                    description: "Test de création via CORS",
+                    prix: 123.45,
+                    categorie: "Test",
+                    stock: 5,
+                    ville: "Kinshasa"
+                };
+
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testProduct)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ POST réussi: Produit ID ${data.data.id}`, 'success');
+                } else {
+                    addResult(`❌ POST échoué: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`💥 Erreur POST: ${error.message}`, 'error');
+            }
+        }
+
+        function testWithXMLHttpRequest() {
+            addResult('🔄 Test XMLHttpRequest...', 'info');
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `${API_BASE}/health`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    addResult(`✅ XMLHttpRequest réussi: ${xhr.status}`, 'success');
+                } else {
+                    addResult(`❌ XMLHttpRequest échoué: ${xhr.status}`, 'error');
+                }
+            };
+            
+            xhr.onerror = function() {
+                addResult(`💥 XMLHttpRequest erreur réseau`, 'error');
+            };
+            
+            xhr.send();
+        }
+
+        async function testPreflight() {
+            addResult('🔄 Test preflight OPTIONS...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'OPTIONS'
+                });
+                addResult(`✅ OPTIONS réussi: ${response.status}`, 'success');
+            } catch (error) {
+                addResult(`❌ OPTIONS échoué: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHeaders() {
+            addResult('🔄 Test headers détaillés...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                
+                // Afficher les headers de réponse
+                const headers = [];
+                response.headers.forEach((value, key) => {
+                    headers.push(`${key}: ${value}`);
+                });
+                
+                addResult(`📋 Headers de réponse:\n${headers.join('\n')}`, 'info');
+            } catch (error) {
+                addResult(`❌ Test headers échoué: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateProductCreation() {
+            addResult('🔄 🚀 SIMULATION CRÉATION PRODUIT (Interface réelle)...', 'warning');
+            
+            const productData = {
+                nom: document.getElementById('productName').value,
+                description: "Description générée automatiquement pour ce produit de test",
+                prix: parseFloat(document.getElementById('productPrice').value),
+                categorie: document.getElementById('productCategory').value,
+                stock: parseInt(document.getElementById('productStock').value),
+                stockMinimum: 5,
+                adresse: "Avenue Test",
+                ville: "Kinshasa",
+                images: [],
+                tags: ["test", "debug"],
+                caracteristiques: [],
+                createdAt: new Date().toISOString(),
+                createdBy: "Admin Test"
+            };
+
+            addResult(`📤 Données envoyées:\n${JSON.stringify(productData, null, 2)}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/produits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(productData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    addResult(`🎉 SUCCÈS! Produit créé avec ID: ${result.data.id}`, 'success');
+                    addResult(`📊 Détails: ${result.message}`, 'success');
+                } else {
+                    addResult(`❌ ÉCHEC: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                addResult(`💥 ERREUR CRITIQUE: ${error.message}`, 'error');
+                addResult(`🔍 Type d'erreur: ${error.constructor.name}`, 'error');
+                
+                // Diagnostic supplémentaire
+                if (error.message.includes('Failed to fetch')) {
+                    addResult(`🕵️ "Failed to fetch" indique généralement:
+- Serveur backend non accessible
+- Problème de CORS
+- Firewall/proxy bloquant
+- Port 5001 non ouvert`, 'warning');
+                }
+            }
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            addResult('🚀 Interface de diagnostic CORS chargée', 'info');
+            testBasicFetch();
+        });
+    </script>
+</body>
+</html>

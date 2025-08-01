@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mireb API Status</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .ok { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Mireb API Status</h1>
+    <div id="status" class="status">Checking...</div>
+    
+    <script>
+        // Simulation d'API pour GitHub Pages
+        const mockAPI = {
+            health: () => ({
+                status: 'OK',
+                timestamp: new Date().toISOString(),
+                message: 'Mireb API is running on GitHub Pages',
+                version: '1.0.0'
+            }),
+            
+            produits: () => [
+                { id: 1, nom: 'iPhone 15', prix: 899, categorie: 'Électronique' },
+                { id: 2, nom: 'MacBook Pro', prix: 1299, categorie: 'Informatique' },
+                { id: 3, nom: 'AirPods Pro', prix: 249, categorie: 'Audio' }
+            ],
+            
+            leads: () => [
+                { id: 1, nom: 'John Doe', email: 'john@example.com', statut: 'nouveau' },
+                { id: 2, nom: 'Jane Smith', email: 'jane@example.com', statut: 'contacté' }
+            ]
+        };
+        
+        // Mock API endpoints
+        window.mirebAPI = {
+            get: (endpoint) => {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        switch(endpoint) {
+                            case '/api/health':
+                                resolve(mockAPI.health());
+                                break;
+                            case '/api/produits':
+                                resolve(mockAPI.produits());
+                                break;
+                            case '/api/leads':
+                                resolve(mockAPI.leads());
+                                break;
+                            default:
+                                resolve({ error: 'Endpoint not found' });
+                        }
+                    }, 100);
+                });
+            }
+        };
+        
+        // Test API
+        window.mirebAPI.get('/api/health').then(data => {
+            document.getElementById('status').innerHTML = `
+                <div class="ok">
+                    ✅ API Status: ${data.status}<br>
+                    📅 Time: ${data.timestamp}<br>
+                    💬 Message: ${data.message}
+                </div>
+                <h3>Available Endpoints:</h3>
+                <ul>
+                    <li><a href="#" onclick="testEndpoint('/api/produits')">GET /api/produits</a></li>
+                    <li><a href="#" onclick="testEndpoint('/api/leads')">GET /api/leads</a></li>
+                    <li><a href="#" onclick="testEndpoint('/api/health')">GET /api/health</a></li>
+                </ul>
+                <div id="test-result"></div>
+            `;
+        });
+        
+        function testEndpoint(endpoint) {
+            window.mirebAPI.get(endpoint).then(data => {
+                document.getElementById('test-result').innerHTML = `
+                    <h4>Result for ${endpoint}:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

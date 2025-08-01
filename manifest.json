@@ -1,0 +1,74 @@
+{
+  "name": "Mireb Commercial - CRM AI",
+  "short_name": "Mireb CRM",
+  "description": "Application CRM commerciale avec intelligence artificielle",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=192&h=192&fit=crop&crop=center",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=512&h=512&fit=crop&crop=center",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=540&h=720&fit=crop",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vue mobile du catalogue produits"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouveau Lead",
+      "short_name": "Lead",
+      "description": "Créer un nouveau prospect",
+      "url": "/?action=new-lead",
+      "icons": [
+        {
+          "src": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=96&h=96&fit=crop",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Chat Support",
+      "short_name": "Chat",
+      "description": "Support client en direct",
+      "url": "/?action=chat",
+      "icons": [
+        {
+          "src": "https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=96&h=96&fit=crop",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://mireb-crm.netlify.app/manifest.json"
+    }
+  ],
+  "prefer_related_applications": false,
+  "features": [
+    "background-sync",
+    "push-notifications",
+    "offline-support"
+  ]
+}
