@@ -1,0 +1,33 @@
+title: "Mireb CRM"
+description: "Système de gestion commerciale Mireb"
+baseurl: ""
+url: ""
+
+# Désactiver Jekyll processing pour certains dossiers
+exclude:
+  - node_modules/
+  - backend/
+  - "*.sh"
+  - "*.md"
+  - package*.json
+
+# Activer GitHub Pages
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
+
+# Configuration pour les assets
+sass:
+  style: compressed
+
+# Activer les inclusions HTML
+markdown: kramdown
+highlighter: rouge
+
+# Headers de sécurité
+webrick:
+  headers:
+    "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:;"
