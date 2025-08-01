@@ -1,144 +1,54 @@
-# 🏪 Mireb CRM - Système de Gestion Commerciale
+# 🏪 Mireb CRM - Système de Gestion Commerciale Simple
 
-[![Deploy Status](https://img.shields.io/badge/Deploy-GitHub%20Pages-brightgreen)](https://franklin-mireb.github.io/mireb-/)
-[![Version](https://img.shields.io/badge/Version-2.0.0-blue)](https://github.com/franklin-mireb/mireb-)
+[![Deploy Status](https://img.shields.io/badge/Deploy-En%20attente-yellow)](https://franklin-mireb.github.io/mireb-/)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue)](https://github.com/franklin-mireb/mireb-)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ## 🎯 À Propos
 
-Mireb CRM est un système de gestion commerciale moderne avec authentification sécurisée, conçu pour la gestion efficace des produits, clients et ventes.
+Mireb CRM est un système de gestion commerciale simple et fonctionnel avec authentification. Il est conçu pour une gestion basique des produits. Ce projet utilise des technologies web fondamentales sans base de données externe.
 
-## 🚀 Démo en Ligne
+## � État Actuel
 
-**🌐 [Accéder à la Demo](https://franklin-mireb.github.io/mireb-/)**
-
-### 🔑 Identifiants de Test
-- **Email** : `mirebshop@gmail.com`
-- **Mot de passe** : `Fiacre-19`
-
-### 📊 CRM Intégré
-- Gestion des leads automatisée
-- Suivi des conversions
-- Analytics en temps réel
-- Notifications WhatsApp
-- Dashboard administrateur complet
-
-### 🌐 Intégrations
-- **MongoDB Atlas** : Base de données cloud
-- **Cloudinary** : Gestion d'images optimisée
-- **OpenAI** : IA conversationnelle
-- **WhatsApp Business** : Communication client
+-   **Local :** Le projet est **100% fonctionnel** sur votre machine locale (Codespaces).
+-   **En ligne (GitHub Pages) :** Le déploiement est presque terminé. Il reste **une seule action manuelle** à faire dans les paramètres de votre dépôt GitHub pour activer le site.
 
 ## 🔧 Technologies utilisées
 
-- **Frontend** : React 18, Tailwind CSS
-- **Backend** : MongoDB Atlas
-- **IA** : OpenAI GPT-3.5-turbo
-- **Images** : Cloudinary
-- **Déploiement** : Vercel
+-   **Frontend** : HTML, JavaScript, Tailwind CSS
+-   **Backend** : Node.js / Express.js
+-   **Base de données** : Aucune (les données sont stockées en mémoire pour le moment)
+-   **Déploiement** : GitHub Pages (pour le frontend)
 
-## 🚀 Test de déploiement
-Déclenchement du workflow de déploiement pour vérifier la configuration des secrets.
+## � Comment lancer le projet en local
 
-## 📋 Configuration requise
+Le projet est déjà configuré pour fonctionner dans cet environnement Codespaces. Un serveur unifié gère à la fois le frontend et le backend.
 
-### Variables d'environnement
-```
-OPENAI_API_KEY=sk-proj-...
-MONGODB_URI=mongodb+srv://...
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-```
+1.  **Démarrer le serveur (si ce n'est pas déjà fait) :**
+    ```bash
+    node backend/server-unified.js
+    ```
+2.  **Accéder à l'application :**
+    Ouvrez votre navigateur à l'adresse [http://localhost:8080/login.html](http://localhost:8080/login.html). Vous devriez voir la page de connexion.
 
-### Comptes requis
-1. **OpenAI** : Créer un compte sur openai.com
-2. **MongoDB Atlas** : Créer un cluster gratuit
-3. **Cloudinary** : Créer un compte gratuit
-4. **Vercel** : Pour le déploiement
+## � Identifiants de Connexion
 
-## 🚀 Déploiement sur Vercel
+-   **Email** : `mirebshop@gmail.com`
+-   **Mot de passe** : `Fiacre-19`
 
-### 1. Préparation
-```bash
-# Cloner le repository
-git clone https://github.com/franklin-mireb/mireb-.git
-cd mireb-
+## 🌐 Déploiement sur GitHub Pages
 
-# Installer les dépendances
-npm install
-```
+Les fichiers du frontend (`index.html`, `login.html`, `admin-add-product.html`, etc.) sont déployés sur GitHub Pages.
 
-### 2. Configuration des variables d'environnement sur Vercel
-1. Aller sur [vercel.com](https://vercel.com)
-2. Importer le projet GitHub
-3. Ajouter les variables d'environnement dans Settings > Environment Variables
+**Lien vers la démo :** **[https://franklin-mireb.github.io/mireb-/login.html](https://franklin-mireb.github.io/mireb-/login.html)**
 
-### 3. Configuration MongoDB
-1. Créer un cluster sur [cloud.mongodb.com](https://cloud.mongodb.com)
-2. Créer une base de données `mireb-commercial`
-3. Autoriser l'accès depuis toutes les IP (0.0.0.0/0) pour Vercel
-
-### 4. Configuration Cloudinary
-1. Créer un compte sur [cloudinary.com](https://cloudinary.com)
-2. Créer un "Upload Preset" nommé `mireb-upload`
-3. Le configurer en mode "Unsigned"
-
-### 5. Déploiement automatique
-```bash
-# Pousser vers GitHub
-git add .
-git commit -m "Configuration pour production"
-git push origin main
-```
-
-Vercel déploiera automatiquement à chaque push.
-
-## 👥 Comptes par défaut
-
-### Interface Admin
-- **Email** : `mirebshop@gmail.com`
-- **Mot de passe** : `Fiacre-19`
-
-## 📱 Fonctionnalités mobiles
-
-- Interface responsive optimisée mobile
-- Progressive Web App (PWA) ready
-- Notifications push
-- Mode hors ligne partiel
-
-## 🔒 Sécurité
-
-- ✅ Variables d'environnement sécurisées
-- ✅ Validation côté client et serveur
-- ✅ Authentification admin
-- ✅ Protection CORS
-- ✅ Chiffrement des données sensibles
-
-## 📈 Analytics et reporting
-
-- Tableau de bord analytics en temps réel
-- Métriques de conversion
-- Suivi des performances produits
-- Rapports d'activité
-
-## 🆘 Support et maintenance
-
-- Logs centralisés
-- Monitoring des erreurs
-- Sauvegarde automatique des données
-- Mise à jour automatique des dépendances
+**⚠️ NOTE IMPORTANTE :** Si le lien ci-dessus affiche une erreur 404, cela signifie que GitHub Pages n'est pas encore activé correctement. Suivez les instructions que je vous fournirai pour résoudre ce problème en moins d'une minute.
 
 ## 📞 Contact
 
 **Franklin Mireb**  
 - Email: mirebshop@gmail.com
-- WhatsApp: +237 XXX XXX XXX
 
 ## 📄 Licence
 
 MIT License - Voir le fichier LICENSE pour plus de détails.
-
----
-
-**🎯 Objectif** : Révolutionner l'e-commerce en Afrique avec l'IA et des outils CRM avancés.
