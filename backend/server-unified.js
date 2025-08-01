@@ -267,6 +267,7 @@ app.get('/api/docs', (req, res) => {
       'GET /api/produits': 'Liste des produits',
       'POST /api/produits': 'Créer un produit',
       'GET /api/produits/:id': 'Détails d\'un produit',
+      'GET /api/analytics/dashboard': 'Analytics du dashboard',
       'POST /api/upload/single': 'Upload d\'image (simulé)',
       'POST /api/openai/generate-description': 'Générer description IA (simulé)',
       'POST /api/openai/optimize-tags': 'Optimiser tags SEO (simulé)'
@@ -274,6 +275,41 @@ app.get('/api/docs', (req, res) => {
     status: 'Unified Mode - Pas de problème CORS',
     note: 'Frontend et API sur le même port pour éviter les problèmes CORS'
   });
+});
+
+// Route Analytics Dashboard
+app.get('/api/analytics/dashboard', (req, res) => {
+  console.log('🔄 Requête analytics dashboard');
+  
+  // Données analytics simulées
+  const analyticsData = {
+    success: true,
+    data: {
+      totalProduits: 1,
+      totalVentes: 0,
+      chiffreAffaires: 0,
+      nouveauxClients: 0,
+      ventesJour: [],
+      topProduits: [],
+      recentActivities: [
+        {
+          id: 1,
+          type: 'produit_ajoute',
+          message: 'Nouveau produit ajouté',
+          timestamp: new Date().toISOString()
+        }
+      ],
+      stats: {
+        conversion: 0,
+        panierMoyen: 0,
+        satisfaction: 95,
+        performanceServeur: 100
+      }
+    },
+    timestamp: new Date().toISOString()
+  };
+  
+  res.json(analyticsData);
 });
 
 // Routes frontend - servir les pages HTML
