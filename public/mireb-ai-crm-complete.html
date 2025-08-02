@@ -2482,107 +2482,88 @@ function AdminProduits({ produits, setProduits, categories }) {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
-    // VALIDATION CRITIQUE: Bloquer sur Render si Cloudinary non disponible
     const isRender = window.location.hostname.includes('onrender.com');
+    const isGitHubPages = window.location.hostname.includes('github.io');
     
-    if (isRender) {
-      // Vérifier que Cloudinary est configuré
-      if (!CLOUDINARY_CONFIG.uploadEndpoint) {
-        alert('❌ ERREUR: Cloudinary requis sur cette plateforme.\nLes images locales ne sont pas supportées.\nVeuillez configurer Cloudinary.');
-        return;
-      }
-      
-      alert('🚨 ATTENTION: Sur cette plateforme, seules les images Cloudinary sont acceptées.\nLes images seront uploadées vers Cloudinary automatiquement.');
-    }
-
     setUploading(true);
     
-    const uploadPromises = files.map(async (file, index) => {
+    console.log(`🔄 Début upload: ${files.length} fichier(s)`);
+    
+    // **SOLUTION SIMPLIFIÉE ROBUSTE**
+    // **SOLUTION SIMPLIFIÉE ROBUSTE**
+    const uploadedUrls = [];
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      console.log(`� Upload ${i + 1}/${files.length}: ${file.name}`);
+      
       try {
-        console.log(`🔄 Upload ${index + 1}/${files.length}: ${file.name}`);
-        const result = await CloudinaryService.uploadImage(file);
+        // **MÉTHODE DIRECTE** qui marche sur Render
+        const formData = new FormData();
+        formData.append('image', file);
         
-        // VALIDATION STRICTE: Rejeter immédiatement les non-Cloudinary sur Render
-        if (isRender && (!result.url.includes('cloudinary.com') && !result.url.includes('res.cloudinary.com'))) {
-          throw new Error('❌ ÉCHEC: Image non-Cloudinary détectée. Upload annulé pour maintenir la compatibilité cross-device.');
+        const response = await fetch('https://mireb-5.onrender.com/api/upload/single', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        console.log(`✅ Upload réussi: ${file.name}`, result);
-        return result;
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.url) {
+          uploadedUrls.push(result.data.url);
+          console.log(`✅ ${file.name}: ${result.data.url}`);
+          successCount++;
+        } else {
+          throw new Error('Réponse invalide du serveur');
+        }
+        
       } catch (error) {
-        console.error(`❌ Échec upload: ${file.name}`, error);
-        throw error;
-      }
-    });
-
-    try {
-      const results = await Promise.allSettled(uploadPromises);
-      const successful = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-      const failed = results.filter(r => r.status === 'rejected');
-      
-      if (successful.length > 0) {
-        // Validation finale: filtrer les URLs non-Cloudinary sur Render
-        const validImages = isRender ? 
-          successful.filter(img => img.url.includes('cloudinary.com') || img.url.includes('res.cloudinary.com')) :
-          successful;
-          
-        if (validImages.length === 0 && isRender) {
-          throw new Error('Aucune image Cloudinary valide. Sur cette plateforme, seules les images uploadées vers Cloudinary sont supportées.');
+        console.error(`❌ Échec ${file.name}:`, error);
+        errorCount++;
+        
+        // **FALLBACK GITHUB PAGES**: Sauvegarde locale
+        if (isGitHubPages) {
+          try {
+            const localUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            
+            uploadedUrls.push(localUrl);
+            console.log(`📱 Fallback local: ${file.name}`);
+            successCount++;
+            errorCount--; // Corriger le compteur d'erreur
+          } catch (fallbackError) {
+            console.error(`❌ Échec fallback ${file.name}:`, fallbackError);
+          }
         }
-        
-        const imageUrls = validImages.map(result => result.url);
-        setUploadedImages(prev => [...prev, ...imageUrls]);
-        
-        // Ajouter automatiquement au champ images
-        const currentImages = form.images ? form.images.split(',').map(i => i.trim()) : [];
-        const newImages = [...currentImages, ...imageUrls].join(', ');
-        setForm({...form, images: newImages});
-        
-        // Message de succès détaillé
-        const successMessage = `✅ ${validImages.length} image(s) uploadée(s) avec succès!`;
-        const storageInfo = isGitHubPages ? 
-          '\n📱 Images stockées localement (mode démo)' : 
-          '\n☁️ Images stockées sur Cloudinary (synchronisées sur tous appareils)';
-        
-        alert(successMessage + storageInfo);
       }
-      
-      if (failed.length > 0) {
-        const failedMessage = `❌ ${failed.length} image(s) ont échoué:\n` + 
-          failed.map((f, i) => `• ${files[results.findIndex(r => r === f)].name}: ${f.reason.message}`).join('\n');
-        console.error('Erreurs upload:', failed);
-        alert(failedMessage);
-      }
-      
-    } catch (error) {
-      console.error('Erreur upload Cloudinary:', error);
-      
-      // Message d'erreur plus informatif selon la plateforme
-      let errorMessage = "❌ Erreur lors de l'upload des images:\n";
-      
-      if (isRender) {
-        errorMessage += "• Cette plateforme requiert Cloudinary\n";
-        errorMessage += "• Les images locales ne sont pas supportées\n";
-        errorMessage += "• Vérifiez votre connexion et réessayez";
-      } else if (error.message.includes('Failed to fetch')) {
-        errorMessage += "• Connexion au serveur impossible\n";
-        errorMessage += "• Mode démo activé - images stockées localement\n";
-        errorMessage += "• Fonctionnalité limitée mais utilisable";
-      } else if (error.message.includes('413')) {
-        errorMessage += "• Fichier(s) trop volumineux (max 10MB)\n";
-        errorMessage += "• Réduisez la taille de vos images";
-      } else if (error.message.includes('401') || error.message.includes('403')) {
-        errorMessage += "• Problème d'authentification\n";
-        errorMessage += "• Vérifiez votre connexion";
-      } else {
-        errorMessage += "• " + error.message + "\n";
-        errorMessage += "• Essayez avec des images plus petites";
-      }
-      
-      alert(errorMessage);
-    } finally {
-      setUploading(false);
     }
+    
+    // **MISE À JOUR INTERFACE**
+    if (successCount > 0) {
+      setUploadedImages(prev => [...prev, ...uploadedUrls]);
+      const currentImages = form.images ? form.images.split(',').map(i => i.trim()).filter(Boolean) : [];
+      const newImagesList = [...currentImages, ...uploadedUrls].join(', ');
+      setForm({...form, images: newImagesList});
+      
+      const platformInfo = isRender ? '☁️ Cloudinary' : '📱 Local (demo)';
+      alert(`✅ ${successCount} image(s) uploadée(s) vers ${platformInfo}!`);
+    }
+    
+    if (errorCount > 0) {
+      alert(`⚠️ ${errorCount} image(s) ont échoué. Vérifiez votre connexion.`);
+    }
+    
+    setUploading(false);
   };
 
   const handleAdd = async () => {
