@@ -142,74 +142,54 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
-// Routes upload - Support multipart ET JSON avec Cloudinary
+// Routes upload - Support multipart ET JSON avec Cloudinary  
 app.post('/api/upload/single', upload.single('image'), async (req, res) => {
   console.log('🔄 Upload image vers Cloudinary');
   
   try {
-    let uploadResult;
-    
     // Si fichier multipart présent
     if (req.file) {
       console.log('📁 Fichier reçu:', { name: req.file.originalname, size: req.file.size });
       
-      // Upload vers Cloudinary
-      uploadResult = await cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'image',
-          folder: 'mireb-products',
-          transformation: [
-            { width: 800, height: 600, crop: 'limit' },
-            { quality: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) {
-            console.error('❌ Erreur Cloudinary:', error);
-            throw error;
-          }
-          return result;
-        }
-      );
-      
-      // Stream le buffer vers Cloudinary
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'image',
-          folder: 'mireb-products',
-          transformation: [
-            { width: 800, height: 600, crop: 'limit' },
-            { quality: 'auto' }
-          ]
-        },
-        (error, result) => {
-          if (error) {
-            console.error('❌ Erreur Cloudinary:', error);
-            return res.status(500).json({
-              success: false,
-              message: 'Erreur lors de l\'upload vers Cloudinary',
-              error: error.message
+      // UPLOAD CLOUDINARY SIMPLIFIÉ
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'image',
+            folder: 'mireb-products',
+            transformation: [
+              { width: 800, height: 600, crop: 'limit' },
+              { quality: 'auto' }
+            ]
+          },
+          (error, result) => {
+            if (error) {
+              console.error('❌ Erreur Cloudinary:', error);
+              return res.status(500).json({
+                success: false,
+                message: 'Erreur lors de l\'upload vers Cloudinary',
+                error: error.message
+              });
+            }
+            
+            console.log('✅ Image uploadée vers Cloudinary:', result.secure_url);
+            
+            res.json({
+              success: true,
+              message: 'Image uploadée avec succès vers Cloudinary',
+              data: {
+                url: result.secure_url,
+                public_id: result.public_id,
+                fileName: req.file.originalname,
+                fileSize: req.file.size,
+                cloudinary_id: result.public_id
+              }
             });
           }
-          
-          console.log('✅ Image uploadée vers Cloudinary:', result.secure_url);
-          
-          res.json({
-            success: true,
-            message: 'Image uploadée avec succès vers Cloudinary',
-            data: {
-              url: result.secure_url,
-              public_id: result.public_id,
-              fileName: req.file.originalname,
-              fileSize: req.file.size,
-              cloudinary_id: result.public_id
-            }
-          });
-        }
-      );
-      
-      stream.end(req.file.buffer);
-      return;
+        );
+        
+        stream.end(req.file.buffer);
+      });
     }
     
     // Si données JSON présentes (fallback avec image par défaut)
