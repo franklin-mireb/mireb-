@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Images Simples</title>
+</head>
+<body>
+    <h1>🚀 TEST IMAGES SIMPLE RENDER</h1>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept="image/*" required>
+        <button type="submit">📤 UPLOAD DIRECT</button>
+    </form>
+    
+    <script>
+    const API_URL = 'https://mireb-5.onrender.com';
+    
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (!fileInput.files[0]) {
+            alert('Sélectionnez une image !');
+            return;
+        }
+        
+        status.innerHTML = '⏳ Upload en cours...';
+        
+        try {
+            // METHODE DIRECTE SIMPLE
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            
+            const response = await fetch(`${API_URL}/api/upload/single`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            status.innerHTML = '✅ SUCCÈS !';
+            results.innerHTML = `
+                <h2>✅ IMAGE UPLOADÉE</h2>
+                <p><strong>URL:</strong> ${result.url}</p>
+                <img src="${result.url}" style="max-width: 300px; border: 2px solid green;" alt="Image uploadée">
+                <br><br>
+                <button onclick="window.open('${result.url}', '_blank')">🔗 Ouvrir l'image</button>
+            `;
+            
+        } catch (error) {
+            status.innerHTML = '❌ ERREUR: ' + error.message;
+            results.innerHTML = `
+                <h2>❌ ÉCHEC</h2>
+                <p>Détails: ${error.message}</p>
+                <p>Vérifiez que Cloudinary est bien configuré.</p>
+            `;
+        }
+    });
+    
+    // Test de connexion au démarrage
+    fetch(`${API_URL}/api/status`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('status').innerHTML = '🟢 Serveur connecté';
+        })
+        .catch(err => {
+            document.getElementById('status').innerHTML = '🔴 Serveur déconnecté';
+        });
+    </script>
+</body>
+</html>
