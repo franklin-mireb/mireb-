@@ -78,7 +78,7 @@ const WEBSOCKET_CONFIG = {
 // Configuration Cloudinary (maintenant gérée côté backend)
 const CLOUDINARY_CONFIG = {
   cloudName: "dwogv9nme",
-  uploadEndpoint: `${BACKEND_CONFIG.baseURL}/upload/single`,
+  uploadEndpoint: `${BACKEND_CONFIG.baseURL}/api/upload/single`,
   transformBaseUrl: "https://res.cloudinary.com/dwogv9nme"
 };
 
@@ -681,13 +681,12 @@ class CloudinaryService {
       
       // FORCER CLOUDINARY UNIQUEMENT sur Render - pas de fallback
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('image', file);  // Backend attend 'image' pas 'file'
       formData.append('folder', 'mireb-uploads');
 
       const response = await fetch(CLOUDINARY_CONFIG.uploadEndpoint, {
         method: 'POST',
-        headers: APIService.getAuthHeaders(),
-        body: formData
+        body: formData  // Pas de headers custom pour FormData
       });
 
       if (!response.ok) {
@@ -698,10 +697,10 @@ class CloudinaryService {
       
       if (data.success) {
         return {
-          publicId: data.data.publicId,
+          publicId: data.data.public_id || data.data.cloudinary_id,
           url: data.data.url,
-          width: data.data.width,
-          height: data.data.height
+          width: data.data.width || 600,  // Valeur par défaut si non fournie
+          height: data.data.height || 400  // Valeur par défaut si non fournie
         };
       } else {
         throw new Error(data.message || 'Upload Cloudinary échoué. Seules les images Cloudinary sont acceptées.');
@@ -2483,21 +2482,29 @@ function AdminProduits({ produits, setProduits, categories }) {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
 
-    setUploading(true);
-    
-    // Vérifier qu'on n'est pas sur GitHub Pages pour les vraies images Cloudinary
-    const isGitHubPages = window.location.hostname.includes('github.io');
+    // VALIDATION CRITIQUE: Bloquer sur Render si Cloudinary non disponible
     const isRender = window.location.hostname.includes('onrender.com');
+    
+    if (isRender) {
+      // Vérifier que Cloudinary est configuré
+      if (!CLOUDINARY_CONFIG.uploadEndpoint) {
+        alert('❌ ERREUR: Cloudinary requis sur cette plateforme.\nLes images locales ne sont pas supportées.\nVeuillez configurer Cloudinary.');
+        return;
+      }
+      
+      alert('🚨 ATTENTION: Sur cette plateforme, seules les images Cloudinary sont acceptées.\nLes images seront uploadées vers Cloudinary automatiquement.');
+    }
+
+    setUploading(true);
     
     const uploadPromises = files.map(async (file, index) => {
       try {
-        // Afficher le progrès
         console.log(`🔄 Upload ${index + 1}/${files.length}: ${file.name}`);
         const result = await CloudinaryService.uploadImage(file);
         
-        // Validation spéciale pour Render: seules les URLs Cloudinary sont acceptées
+        // VALIDATION STRICTE: Rejeter immédiatement les non-Cloudinary sur Render
         if (isRender && (!result.url.includes('cloudinary.com') && !result.url.includes('res.cloudinary.com'))) {
-          throw new Error('Seules les images Cloudinary sont autorisées sur cette plateforme');
+          throw new Error('❌ ÉCHEC: Image non-Cloudinary détectée. Upload annulé pour maintenir la compatibilité cross-device.');
         }
         
         console.log(`✅ Upload réussi: ${file.name}`, result);
