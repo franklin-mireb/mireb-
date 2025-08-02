@@ -679,7 +679,7 @@ class CloudinaryService {
         return await this.uploadImageMock(file);
       }
       
-      // Tentative d'upload vers le backend normal
+      // FORCER CLOUDINARY UNIQUEMENT sur Render - pas de fallback
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', 'mireb-uploads');
@@ -691,7 +691,7 @@ class CloudinaryService {
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+        throw new Error(`Upload Cloudinary échoué: ${response.status}. Seules les images Cloudinary sont acceptées sur cette plateforme.`);
       }
 
       const data = await response.json();
@@ -704,12 +704,17 @@ class CloudinaryService {
           height: data.data.height
         };
       } else {
-        throw new Error(data.message || 'Upload failed');
+        throw new Error(data.message || 'Upload Cloudinary échoué. Seules les images Cloudinary sont acceptées.');
       }
     } catch (error) {
       console.error('Cloudinary Upload Error:', error);
       
-      // Fallback vers le service mock en cas d'erreur
+      // Sur Render: PAS de fallback vers mock - forcer Cloudinary uniquement
+      if (!window.location.hostname.includes('github.io')) {
+        throw new Error(`Upload Cloudinary requis: ${error.message}. Les images locales ne sont pas supportées sur cette plateforme.`);
+      }
+      
+      // Fallback mock seulement sur GitHub Pages
       try {
         return await this.uploadImageMock(file);
       } catch (mockError) {
@@ -1149,7 +1154,9 @@ class OpenAIService {
    ========================================================= */
 class CRMService {
   static async addLead(leadData) {
-    const leads = loadData('leads');
+    const isRender = window.location.hostname.includes('onrender.com');
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
     const newLead = {
       id: Date.now(),
       ...leadData,
@@ -1158,22 +1165,66 @@ class CRMService {
       source: 'website',
       priority: 'normale'
     };
+    
+    // Sur Render: utiliser UNIQUEMENT l'API
+    if (isRender) {
+      try {
+        const response = await APIService.post('/leads', newLead);
+        console.log('✅ Lead ajouté via API:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('❌ Erreur ajout lead via API:', error);
+        throw new Error('Synchronisation requise: impossible d\'ajouter le lead. Vérifiez votre connexion.');
+      }
+    }
+    
+    // GitHub Pages ou fallback: localStorage + tentative API
+    const leads = loadData('leads');
     leads.push(newLead);
     saveData('leads', leads);
     
-    // Sauvegarde aussi dans MongoDB
-    await MongoDBService.saveToMongoDB('leads', newLead);
+    // Tentative sauvegarde API en arrière-plan
+    try {
+      await APIService.post('/leads', newLead);
+      await MongoDBService.saveToMongoDB('leads', newLead);
+    } catch (error) {
+      console.warn('Sauvegarde API échouée, données en local uniquement:', error);
+    }
     
     // Mise à jour analytics
     const analytics = loadData('analytics');
     analytics.leads += 1;
     saveData('analytics', analytics);
-    await MongoDBService.saveToMongoDB('analytics', analytics);
+    
+    try {
+      await MongoDBService.saveToMongoDB('analytics', analytics);
+    } catch (error) {
+      console.warn('Mise à jour analytics API échouée:', error);
+    }
     
     return newLead;
   }
 
   static async updateLeadStatus(leadId, newStatus) {
+    const isRender = window.location.hostname.includes('onrender.com');
+    
+    // Sur Render: utiliser UNIQUEMENT l'API
+    if (isRender) {
+      try {
+        const updateData = {
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        };
+        const response = await APIService.put(`/leads/${leadId}`, updateData);
+        console.log('✅ Lead mis à jour via API:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('❌ Erreur mise à jour lead via API:', error);
+        throw new Error('Synchronisation requise: impossible de mettre à jour le lead.');
+      }
+    }
+    
+    // GitHub Pages ou fallback: localStorage + tentative API
     const leads = loadData('leads');
     const leadIndex = leads.findIndex(l => l.id === leadId);
     if (leadIndex !== -1) {
@@ -1181,23 +1232,63 @@ class CRMService {
       leads[leadIndex].updatedAt = new Date().toISOString();
       saveData('leads', leads);
       
-      // Mise à jour dans MongoDB
-      await MongoDBService.updateInMongoDB('leads', leadId, {
-        status: newStatus,
-        updatedAt: new Date().toISOString()
-      });
+      // Tentative mise à jour API
+      try {
+        await MongoDBService.updateInMongoDB('leads', leadId, {
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        console.warn('Mise à jour API échouée:', error);
+      }
       
       if (newStatus === 'converti') {
         const analytics = loadData('analytics');
         analytics.conversions += 1;
         saveData('analytics', analytics);
-        await MongoDBService.saveToMongoDB('analytics', analytics);
+        
+        try {
+          await MongoDBService.saveToMongoDB('analytics', analytics);
+        } catch (error) {
+          console.warn('Mise à jour analytics API échouée:', error);
+        }
       }
     }
   }
 
-  static getLeadsByStatus(status = null) {
+  static async getLeadsByStatus(status = null) {
+    const isRender = window.location.hostname.includes('onrender.com');
+    
+    // Sur Render: utiliser UNIQUEMENT l'API
+    if (isRender) {
+      try {
+        const response = await APIService.get('/leads');
+        const leads = response.data || [];
+        console.log('✅ Leads récupérés via API:', leads.length);
+        return status ? leads.filter(l => l.status === status) : leads;
+      } catch (error) {
+        console.error('❌ Erreur récupération leads via API:', error);
+        // En cas d'erreur sur Render, retourner tableau vide plutôt que localStorage
+        return [];
+      }
+    }
+    
+    // GitHub Pages ou fallback: localStorage avec tentative de sync API
     const leads = loadData('leads');
+    
+    // Tentative de récupération API en arrière-plan pour sync
+    try {
+      const response = await APIService.get('/leads');
+      if (response.data && response.data.length > 0) {
+        // Fusionner les données API avec localStorage (API prioritaire)
+        saveData('leads', response.data);
+        const syncedLeads = response.data;
+        return status ? syncedLeads.filter(l => l.status === status) : syncedLeads;
+      }
+    } catch (error) {
+      console.warn('Sync API leads échouée, utilisation données locales:', error);
+    }
+    
     return status ? leads.filter(l => l.status === status) : leads;
   }
 
@@ -2108,7 +2199,7 @@ function DetailProduit({ produit, onBack }) {
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Enregistrer le lead dans le CRM
@@ -2122,14 +2213,18 @@ function DetailProduit({ produit, onBack }) {
       prixProduit: produit.prix
     };
     
-    CRMService.addLead(leadData);
-    
-    console.log("NOUVEAU LEAD CRM:", leadData);
-    setSent(true);
-    setTimeout(() => setSent(false), 3000);
-    
-    // Reset form - correction du reset double
-    setForm({ nom: "", tel: "", adresse: "", ville: "", message: "" });
+    try {
+      await CRMService.addLead(leadData);
+      console.log("✅ NOUVEAU LEAD CRM:", leadData);
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
+      
+      // Reset form
+      setForm({ nom: "", tel: "", adresse: "", ville: "", message: "" });
+    } catch (error) {
+      console.error("❌ Erreur ajout lead:", error);
+      alert("Erreur lors de l'envoi: " + error.message);
+    }
   };
 
   return (
@@ -2389,11 +2484,22 @@ function AdminProduits({ produits, setProduits, categories }) {
     if (files.length === 0) return;
 
     setUploading(true);
+    
+    // Vérifier qu'on n'est pas sur GitHub Pages pour les vraies images Cloudinary
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const isRender = window.location.hostname.includes('onrender.com');
+    
     const uploadPromises = files.map(async (file, index) => {
       try {
         // Afficher le progrès
         console.log(`🔄 Upload ${index + 1}/${files.length}: ${file.name}`);
         const result = await CloudinaryService.uploadImage(file);
+        
+        // Validation spéciale pour Render: seules les URLs Cloudinary sont acceptées
+        if (isRender && (!result.url.includes('cloudinary.com') && !result.url.includes('res.cloudinary.com'))) {
+          throw new Error('Seules les images Cloudinary sont autorisées sur cette plateforme');
+        }
+        
         console.log(`✅ Upload réussi: ${file.name}`, result);
         return result;
       } catch (error) {
@@ -2408,7 +2514,16 @@ function AdminProduits({ produits, setProduits, categories }) {
       const failed = results.filter(r => r.status === 'rejected');
       
       if (successful.length > 0) {
-        const imageUrls = successful.map(result => result.url);
+        // Validation finale: filtrer les URLs non-Cloudinary sur Render
+        const validImages = isRender ? 
+          successful.filter(img => img.url.includes('cloudinary.com') || img.url.includes('res.cloudinary.com')) :
+          successful;
+          
+        if (validImages.length === 0 && isRender) {
+          throw new Error('Aucune image Cloudinary valide. Sur cette plateforme, seules les images uploadées vers Cloudinary sont supportées.');
+        }
+        
+        const imageUrls = validImages.map(result => result.url);
         setUploadedImages(prev => [...prev, ...imageUrls]);
         
         // Ajouter automatiquement au champ images
@@ -2417,9 +2532,10 @@ function AdminProduits({ produits, setProduits, categories }) {
         setForm({...form, images: newImages});
         
         // Message de succès détaillé
-        const successMessage = `✅ ${successful.length} image(s) uploadée(s) avec succès!`;
-        const isGitHubPages = window.location.hostname.includes('github.io');
-        const storageInfo = isGitHubPages ? '\n📱 Images stockées localement (mode démo)' : '\n☁️ Images stockées sur Cloudinary';
+        const successMessage = `✅ ${validImages.length} image(s) uploadée(s) avec succès!`;
+        const storageInfo = isGitHubPages ? 
+          '\n📱 Images stockées localement (mode démo)' : 
+          '\n☁️ Images stockées sur Cloudinary (synchronisées sur tous appareils)';
         
         alert(successMessage + storageInfo);
       }
@@ -2434,10 +2550,14 @@ function AdminProduits({ produits, setProduits, categories }) {
     } catch (error) {
       console.error('Erreur upload Cloudinary:', error);
       
-      // Message d'erreur plus informatif
+      // Message d'erreur plus informatif selon la plateforme
       let errorMessage = "❌ Erreur lors de l'upload des images:\n";
       
-      if (error.message.includes('Failed to fetch')) {
+      if (isRender) {
+        errorMessage += "• Cette plateforme requiert Cloudinary\n";
+        errorMessage += "• Les images locales ne sont pas supportées\n";
+        errorMessage += "• Vérifiez votre connexion et réessayez";
+      } else if (error.message.includes('Failed to fetch')) {
         errorMessage += "• Connexion au serveur impossible\n";
         errorMessage += "• Mode démo activé - images stockées localement\n";
         errorMessage += "• Fonctionnalité limitée mais utilisable";
@@ -3535,9 +3655,10 @@ function AdminLeads() {
 
   // Charger les leads au démarrage
   useEffect(() => {
-    const loadLeads = () => {
+    const loadLeads = async () => {
       try {
-        const allLeads = CRMService.getLeadsByStatus();
+        setLoading(true);
+        const allLeads = await CRMService.getLeadsByStatus();
         setLeads(allLeads);
         setLoading(false);
       } catch (error) {
@@ -3547,8 +3668,8 @@ function AdminLeads() {
     };
 
     loadLeads();
-    // Actualiser toutes les 5 secondes
-    const interval = setInterval(loadLeads, 5000);
+    // Actualiser toutes les 10 secondes (augmenté pour API)
+    const interval = setInterval(loadLeads, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -3570,11 +3691,11 @@ function AdminLeads() {
     try {
       await CRMService.updateLeadStatus(leadId, newStatus);
       // Recharger les leads après mise à jour
-      const updatedLeads = CRMService.getLeadsByStatus();
+      const updatedLeads = await CRMService.getLeadsByStatus();
       setLeads(updatedLeads);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du lead:', error);
-      alert('Erreur lors de la mise à jour du statut');
+      alert('Erreur lors de la mise à jour du statut: ' + error.message);
     }
   };
 
