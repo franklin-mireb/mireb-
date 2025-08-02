@@ -255,6 +255,109 @@ app.post('/api/upload/single', upload.single('image'), async (req, res) => {
   }
 });
 
+// === ROUTES PRODUITS ===
+// Fonction pour normaliser les images
+function normalizeImages(images) {
+  if (!images) return [];
+  if (typeof images === 'string') {
+    // Si c'est une chaîne, la convertir en tableau d'objets
+    return images.split(',').map(url => ({
+      url: url.trim(),
+      alt: 'Image produit',
+      isPrimaire: false
+    })).slice(0, 1).map((img, index) => ({ ...img, isPrimaire: index === 0 }));
+  }
+  if (Array.isArray(images)) {
+    return images.map((img, index) => {
+      if (typeof img === 'string') {
+        return {
+          url: img,
+          alt: 'Image produit',
+          isPrimaire: index === 0
+        };
+      }
+      return {
+        url: img.url || img,
+        alt: img.alt || 'Image produit',
+        isPrimaire: index === 0 || img.isPrimaire === true
+      };
+    });
+  }
+  return [];
+}
+
+// GET /api/produits - Lister les produits
+app.get('/api/produits', (req, res) => {
+  try {
+    const data = readDatabase();
+    const produits = data.produits || [];
+    
+    // Normaliser les images pour tous les produits
+    const produitsNormalises = produits.map(produit => ({
+      ...produit,
+      images: normalizeImages(produit.images)
+    }));
+    
+    console.log(`📋 ${produitsNormalises.length} produits retournés`);
+    
+    res.json({
+      success: true,
+      data: produitsNormalises,
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        total: produitsNormalises.length,
+        hasNext: false,
+        hasPrev: false
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erreur lecture produits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la lecture des produits',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/produits - Créer un produit
+app.post('/api/produits', (req, res) => {
+  try {
+    const produitData = req.body;
+    console.log('📦 Création produit:', produitData.nom);
+    
+    const data = readDatabase();
+    if (!data.produits) data.produits = [];
+    
+    const nouveauProduit = {
+      id: Date.now(),
+      ...produitData,
+      images: normalizeImages(produitData.images),
+      createdAt: new Date().toISOString(),
+      createdBy: 'Admin Mireb'
+    };
+    
+    data.produits.push(nouveauProduit);
+    writeDatabase(data);
+    
+    console.log('✅ Produit créé avec ID:', nouveauProduit.id);
+    
+    res.json({
+      success: true,
+      message: 'Produit créé avec succès',
+      data: nouveauProduit
+    });
+  } catch (error) {
+    console.error('❌ Erreur création produit:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création du produit',
+      error: error.message
+    });
+  }
+});
+
 // Routes OpenAI simulées
 app.post('/api/openai/generate-description', (req, res) => {
   const { nom, categorie, prix } = req.body;
@@ -319,6 +422,47 @@ app.post('/api/openai/generate-description', (req, res) => {
   });
 });
 
+// Endpoint manquant pour l'analyse d'image IA
+app.post('/api/openai/analyze-image', (req, res) => {
+  const { imageUrl, productName } = req.body;
+  console.log('🔍 Analyse image IA simulée pour:', { imageUrl: imageUrl?.substring(0, 50) + '...', productName });
+  
+  // Simulation réaliste de l'analyse d'image
+  const features = [
+    'Design moderne',
+    'Finition premium',
+    'Ergonomique',
+    'Durable',
+    'Esthétique soignée',
+    'Haute qualité',
+    'Innovant',
+    'Fonctionnel'
+  ];
+  
+  const colors = ['Attrayant', 'Harmonieux', 'Professionnel'];
+  const materials = ['Matériaux nobles', 'Construction solide', 'Finitions qualité'];
+  
+  // Sélection aléatoire de 3-5 caractéristiques
+  const selectedFeatures = features
+    .sort(() => 0.5 - Math.random())
+    .slice(0, Math.floor(Math.random() * 3) + 3);
+  
+  res.json({
+    success: true,
+    message: 'Analyse d\'image terminée',
+    analysis: {
+      features: selectedFeatures,
+      colors: colors.slice(0, 2),
+      materials: materials.slice(0, 2),
+      style: 'Style contemporain',
+      confidence: 0.85
+    },
+    warning: imageUrl?.includes('blob:') 
+      ? 'Image locale détectée - analyse simulée'
+      : 'IA indisponible, analyse simulée'
+  });
+});
+
 app.post('/api/openai/optimize-tags', (req, res) => {
   const { nom, categorie, ville } = req.body;
   console.log('🔄 Optimisation tags simulée pour:', { nom, categorie, ville });
@@ -357,6 +501,7 @@ app.get('/api/docs', (req, res) => {
       'GET /api/analytics/dashboard': 'Analytics du dashboard',
       'POST /api/upload/single': 'Upload d\'image (simulé)',
       'POST /api/openai/generate-description': 'Générer description IA (simulé)',
+      'POST /api/openai/analyze-image': 'Analyser image produit IA (simulé)',
       'POST /api/openai/optimize-tags': 'Optimiser tags SEO (simulé)'
     },
     status: 'Unified Mode - Pas de problème CORS',
@@ -493,6 +638,7 @@ app.use('/api/*', (req, res) => {
       'POST /api/produits',
       'POST /api/upload/single',
       'POST /api/openai/generate-description',
+      'POST /api/openai/analyze-image',
       'POST /api/openai/optimize-tags'
     ]
   });

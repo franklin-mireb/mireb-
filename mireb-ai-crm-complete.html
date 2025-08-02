@@ -1849,9 +1849,14 @@ function ProductCard({ product, onView }) {
     categorie = 'Non catégorisé'
   } = product;
 
-  const imageUrl = Array.isArray(images) && images.length > 0 
-    ? images[0] 
-    : 'https://via.placeholder.com/300x200?text=Image+Non+Disponible';
+  const imageUrl = (() => {
+    if (Array.isArray(images) && images.length > 0) {
+      const firstImage = images[0];
+      // Support des objets {url, alt} et des chaînes simples
+      return typeof firstImage === 'object' ? firstImage.url : firstImage;
+    }
+    return 'https://via.placeholder.com/300x200?text=Image+Non+Disponible';
+  })();
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -2559,18 +2564,35 @@ function AdminProduits({ produits, setProduits, categories }) {
                 }
                 
                 try {
+                  console.log('🚀 Envoi requête IA pour:', form.nom, 'Image:', imageUrl);
                   const result = await AIService.analyzeProductImage(imageUrl, form.nom);
+                  console.log('📥 Réponse IA reçue:', result);
                   
+                  // Support de différents formats de réponse
+                  let analysisData;
                   if (result.success && result.analysis) {
+                    analysisData = result.analysis;
+                  } else if (result.data && result.data.analysis) {
+                    analysisData = result.data.analysis;
+                  } else if (result.analysis) {
+                    analysisData = result.analysis;
+                  } else {
+                    console.warn('⚠️ Format de réponse inattendu:', result);
+                    throw new Error('Format de réponse IA invalide');
+                  }
+                  
+                  if (analysisData && analysisData.features) {
                     // Ajouter les caractéristiques trouvées
                     const existingFeatures = form.features ? form.features.split(',').map(f => f.trim()) : [];
-                    const newFeatures = [...existingFeatures, ...result.analysis.features].slice(0, 10);
+                    const newFeatures = [...existingFeatures, ...analysisData.features].slice(0, 10);
                     setForm({...form, features: [...new Set(newFeatures)].join(', ')});
                     
-                    alert(`✅ Analyse terminée! ${result.analysis.features.length} caractéristiques détectées.`);
+                    alert(`✅ Analyse terminée! ${analysisData.features.length} caractéristiques détectées.`);
                     if (result.warning) {
                       alert(`⚠️ ${result.warning}`);
                     }
+                  } else {
+                    throw new Error('Aucune caractéristique détectée dans la réponse');
                   }
                 } catch (error) {
                   alert('❌ Erreur lors de l\'analyse: ' + error.message);
