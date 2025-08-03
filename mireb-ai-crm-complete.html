@@ -325,33 +325,124 @@ class ProductService {
         return response.data;
       }
       
-      // Sur GitHub Pages ou local: utiliser localStorage avec fallback API
-      const produits = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
-      
-      // Générer un ID unique
-      const newProduct = {
-        id: Date.now(),
-        ...productData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Ajouter au localStorage
-      produits.push(newProduct);
-      localStorage.setItem('mireb_produits', JSON.stringify(produits));
-      
-      // Tentative de sauvegarde API en arrière-plan (ne pas attendre)
+      // Sur GitHub Pages ou local: optimiser le stockage localStorage
       try {
-        await APIService.post('/produits', newProduct);
-        console.log('✅ Produit sauvegardé sur l\'API backend');
-      } catch (error) {
-        console.warn('⚠️ Sauvegarde API échouée, produit stocké localement uniquement:', error.message);
+        const produits = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+        
+        // Optimiser les données avant stockage
+        const optimizedProductData = {
+          ...productData,
+          // Limiter les images à des URLs ou des données optimisées
+          images: Array.isArray(productData.images) 
+            ? productData.images.slice(0, 3).map(img => {
+                // Si c'est une data URL trop longue, la remplacer par un placeholder
+                if (typeof img === 'string' && img.startsWith('data:') && img.length > 50000) {
+                  return 'https://via.placeholder.com/300x200?text=Image+Trop+Volumineuse';
+                }
+                return img;
+              })
+            : (productData.images || ['https://via.placeholder.com/300x200?text=Produit']),
+          // Limiter la description
+          description: (productData.description || '').substring(0, 1000)
+        };
+        
+        // Générer un ID unique
+        const newProduct = {
+          id: Date.now(),
+          ...optimizedProductData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Vérifier et nettoyer le localStorage si nécessaire
+        await this.checkAndCleanStorage();
+        
+        // Limiter le nombre de produits stockés localement (max 50)
+        if (produits.length >= 50) {
+          // Supprimer les plus anciens
+          produits.splice(0, produits.length - 49);
+          console.warn('⚠️ Limite de stockage atteinte, suppression des anciens produits');
+        }
+        
+        // Ajouter le nouveau produit
+        produits.push(newProduct);
+        
+        // Essayer de sauvegarder avec gestion d'erreur quota
+        try {
+          localStorage.setItem('mireb_produits', JSON.stringify(produits));
+        } catch (quotaError) {
+          if (quotaError.name === 'QuotaExceededError') {
+            // Nettoyer et réessayer avec moins de produits
+            console.warn('🚨 Quota localStorage dépassé, nettoyage forcé');
+            const reducedProducts = produits.slice(-20); // Garder seulement les 20 derniers
+            localStorage.setItem('mireb_produits', JSON.stringify(reducedProducts));
+            console.log('✅ Stockage réduit à 20 produits les plus récents');
+          } else {
+            throw quotaError;
+          }
+        }
+        
+        // Tentative de sauvegarde API en arrière-plan (ne pas attendre)
+        try {
+          await APIService.post('/produits', newProduct);
+          console.log('✅ Produit sauvegardé sur l\'API backend');
+        } catch (error) {
+          console.warn('⚠️ Sauvegarde API échouée, produit stocké localement uniquement:', error.message);
+        }
+        
+        return newProduct;
+      } catch (storageError) {
+        console.error('Erreur localStorage:', storageError);
+        throw new Error('Erreur de stockage local: ' + storageError.message);
       }
-      
-      return newProduct;
     } catch (error) {
       console.error('Erreur création produit:', error);
       throw error;
+    }
+  }
+
+  // Méthode pour vérifier et nettoyer le localStorage
+  static async checkAndCleanStorage() {
+    try {
+      // Vérifier l'espace disponible en essayant de stocker une chaîne test
+      const testKey = 'mireb_storage_test';
+      const testData = 'x'.repeat(1024); // 1KB de test
+      
+      try {
+        localStorage.setItem(testKey, testData);
+        localStorage.removeItem(testKey);
+      } catch (error) {
+        // Espace insuffisant, nettoyer
+        console.warn('🧹 Nettoyage du localStorage nécessaire');
+        
+        // Supprimer les anciennes données non essentielles
+        const keysToClean = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.includes('mireb_uploaded_images') ||
+            key.includes('mireb_analytics') ||
+            key.includes('mireb_temp')
+          )) {
+            keysToClean.push(key);
+          }
+        }
+        
+        keysToClean.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`🗑️ Supprimé: ${key}`);
+        });
+        
+        // Réduire les produits existants si nécessaire
+        const existingProducts = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+        if (existingProducts.length > 20) {
+          const reducedProducts = existingProducts.slice(-20);
+          localStorage.setItem('mireb_produits', JSON.stringify(reducedProducts));
+          console.log(`📦 Produits réduits de ${existingProducts.length} à 20`);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du nettoyage du storage:', error);
     }
   }
 
@@ -1710,6 +1801,11 @@ function saveData(key, data) {
     localStorage.setItem(`mireb_${key}`, JSON.stringify(data));
   } catch (error) {
     console.error(`Erreur sauvegarde ${key}:`, error);
+    // Si erreur de quota, essayer de nettoyer
+    if (error.name === 'QuotaExceededError') {
+      cleanLocalStorage();
+      throw new Error('Espace de stockage local insuffisant. Un nettoyage automatique a été effectué.');
+    }
   }
 }
 
@@ -1720,6 +1816,74 @@ function loadData(key, defaultValue = []) {
   } catch (error) {
     console.error(`Erreur chargement ${key}:`, error);
     return defaultValue;
+  }
+}
+
+// Fonction de nettoyage du localStorage
+function cleanLocalStorage() {
+  try {
+    console.log('🧹 Début du nettoyage du localStorage...');
+    
+    // Supprimer les données temporaires et les caches
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.includes('mireb_uploaded_images') ||
+        key.includes('mireb_analytics') ||
+        key.includes('mireb_temp') ||
+        key.includes('mireb_cache') ||
+        key.includes('demo_token')
+      )) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    // Supprimer les clés identifiées
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`🗑️ Supprimé: ${key}`);
+    });
+    
+    // Limiter les produits aux 15 plus récents
+    const produits = loadData('produits', []);
+    if (produits.length > 15) {
+      const recentProducts = produits.slice(-15);
+      saveData('produits', recentProducts);
+      console.log(`📦 Produits réduits de ${produits.length} à 15`);
+    }
+    
+    // Limiter les leads aux 20 plus récents
+    const leads = loadData('leads', []);
+    if (leads.length > 20) {
+      const recentLeads = leads.slice(-20);
+      saveData('leads', recentLeads);
+      console.log(`👥 Leads réduits de ${leads.length} à 20`);
+    }
+    
+    console.log('✅ Nettoyage du localStorage terminé');
+  } catch (error) {
+    console.error('❌ Erreur lors du nettoyage:', error);
+  }
+}
+
+// Fonction pour vérifier l'espace localStorage disponible
+function checkLocalStorageSpace() {
+  try {
+    const used = new Blob(Object.values(localStorage)).size;
+    const total = 5 * 1024 * 1024; // 5MB approximatif
+    const percentage = (used / total * 100).toFixed(1);
+    
+    console.log(`📊 LocalStorage utilisé: ${(used / 1024).toFixed(1)} KB (${percentage}%)`);
+    
+    if (percentage > 80) {
+      console.warn('⚠️ LocalStorage presque plein, nettoyage recommandé');
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Erreur vérification espace:', error);
+    return false;
   }
 }
 
@@ -2660,7 +2824,34 @@ function AdminProduits({ produits, setProduits, categories }) {
       if (isRender) {
         alert('❌ Erreur lors de la sauvegarde sur le serveur: ' + error.message);
       } else if (isGitHubPages) {
-        alert('❌ Erreur lors de la sauvegarde locale: ' + error.message + '\n\nVérifiez que votre navigateur autorise le localStorage.');
+        // Gestion spéciale des erreurs de quota localStorage
+        if (error.message.includes('quota') || error.message.includes('exceeded') || error.message.includes('QuotaExceededError')) {
+          // Proposer le nettoyage automatique
+          if (confirm('🚨 Espace de stockage local insuffisant!\n\n' +
+                     'Voulez-vous nettoyer automatiquement les anciennes données pour libérer de l\'espace?\n\n' +
+                     '✅ Cela supprimera les anciens produits et données temporaires\n' +
+                     '✅ Vos données les plus récentes seront conservées')) {
+            try {
+              cleanLocalStorage();
+              alert('🧹 Nettoyage terminé! Vous pouvez maintenant réessayer d\'ajouter votre produit.');
+            } catch (cleanError) {
+              alert('❌ Erreur lors du nettoyage: ' + cleanError.message + '\n\n' +
+                   'Solution manuelle:\n' +
+                   '1. Ouvrez les outils de développement (F12)\n' +
+                   '2. Allez dans l\'onglet Application/Storage\n' +
+                   '3. Supprimez les données localStorage du site');
+            }
+          } else {
+            alert('💡 Solutions pour libérer de l\'espace:\n\n' +
+                 '1. 🔄 Rechargez la page et réessayez\n' +
+                 '2. 🗑️ Supprimez les données du site dans les paramètres du navigateur\n' +
+                 '3. 📱 Utilisez des images plus petites ou des URLs d\'images\n' +
+                 '4. 🌐 Utilisez la version Render pour un stockage illimité');
+          }
+        } else {
+          alert('❌ Erreur lors de la sauvegarde locale: ' + error.message + '\n\n' +
+               'Vérifiez que votre navigateur autorise le localStorage.');
+        }
       } else {
         alert('❌ Erreur lors de l\'ajout du produit: ' + error.message);
       }
@@ -2953,14 +3144,42 @@ function AdminProduits({ produits, setProduits, categories }) {
             </div>
           </div>
         </div>
-        <button 
-          onClick={handleAdd} 
-          disabled={!form.nom || !form.prix || uploading}
-          className="mt-4 bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg disabled:opacity-50 flex items-center"
-        >
-          <i className="fas fa-plus mr-2"></i>
-          {uploading ? 'Upload en cours...' : 'Ajouter produit'}
-        </button>
+        <div className="flex space-x-3 mt-4">
+          <button 
+            onClick={handleAdd} 
+            disabled={!form.nom || !form.prix || uploading}
+            className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg disabled:opacity-50 flex items-center"
+          >
+            <i className="fas fa-plus mr-2"></i>
+            {uploading ? 'Upload en cours...' : 'Ajouter produit'}
+          </button>
+          
+          {/* Bouton de nettoyage localStorage (GitHub Pages uniquement) */}
+          {window.location.hostname.includes('github.io') && (
+            <button 
+              onClick={() => {
+                if (confirm('🧹 Voulez-vous nettoyer le stockage local?\n\n' +
+                           '✅ Cela supprimera les anciennes données et libérera de l\'espace\n' +
+                           '✅ Vos derniers produits seront conservés\n\n' +
+                           'Continuer?')) {
+                  try {
+                    cleanLocalStorage();
+                    alert('✅ Nettoyage terminé! Espace libéré.');
+                    // Rafraîchir les produits affichés
+                    window.location.reload();
+                  } catch (error) {
+                    alert('❌ Erreur lors du nettoyage: ' + error.message);
+                  }
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center text-sm"
+              title="Nettoyer le stockage local pour libérer de l'espace"
+            >
+              <i className="fas fa-broom mr-2"></i>
+              Nettoyer stockage
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Liste produits */}
