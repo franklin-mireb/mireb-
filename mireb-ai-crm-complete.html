@@ -314,9 +314,41 @@ class ProductService {
   }
 
   static async createProduct(productData) {
+    // Détection de la plateforme
+    const isRender = window.location.hostname.includes('onrender.com');
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    
     try {
-      const response = await APIService.post('/produits', productData);
-      return response.data;
+      // Sur Render: utiliser UNIQUEMENT l'API
+      if (isRender) {
+        const response = await APIService.post('/produits', productData);
+        return response.data;
+      }
+      
+      // Sur GitHub Pages ou local: utiliser localStorage avec fallback API
+      const produits = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+      
+      // Générer un ID unique
+      const newProduct = {
+        id: Date.now(),
+        ...productData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Ajouter au localStorage
+      produits.push(newProduct);
+      localStorage.setItem('mireb_produits', JSON.stringify(produits));
+      
+      // Tentative de sauvegarde API en arrière-plan (ne pas attendre)
+      try {
+        await APIService.post('/produits', newProduct);
+        console.log('✅ Produit sauvegardé sur l\'API backend');
+      } catch (error) {
+        console.warn('⚠️ Sauvegarde API échouée, produit stocké localement uniquement:', error.message);
+      }
+      
+      return newProduct;
     } catch (error) {
       console.error('Erreur création produit:', error);
       throw error;
@@ -2607,10 +2639,31 @@ function AdminProduits({ produits, setProduits, categories }) {
       setUploadedImages([]);
       setGeneratingDescription(false);
       
-      alert('✅ Produit ajouté avec succès !');
+      // Message de succès adapté à la plateforme
+      const isRender = window.location.hostname.includes('onrender.com');
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      
+      if (isRender) {
+        alert('✅ Produit ajouté avec succès et sauvegardé sur le serveur !');
+      } else if (isGitHubPages) {
+        alert('✅ Produit ajouté avec succès et sauvegardé localement ! (Mode démo GitHub Pages)');
+      } else {
+        alert('✅ Produit ajouté avec succès !');
+      }
     } catch (error) {
       console.error('Erreur lors de l\'ajout du produit:', error);
-      alert('Erreur lors de l\'ajout du produit: ' + error.message);
+      
+      // Message d'erreur plus informatif
+      const isRender = window.location.hostname.includes('onrender.com');
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      
+      if (isRender) {
+        alert('❌ Erreur lors de la sauvegarde sur le serveur: ' + error.message);
+      } else if (isGitHubPages) {
+        alert('❌ Erreur lors de la sauvegarde locale: ' + error.message + '\n\nVérifiez que votre navigateur autorise le localStorage.');
+      } else {
+        alert('❌ Erreur lors de l\'ajout du produit: ' + error.message);
+      }
     }
   };
 
