@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final Complet - Mireb CRM</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: linear-gradient(45deg, #2563eb, #7c3aed); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; margin-bottom: 20px; }
+        .status { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #fbbf24; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 18px; margin-bottom: 20px; color: #1f2937; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; display: inline-block; text-decoration: none; color: white; }
+        .btn-blue { background: #2563eb; } .btn-blue:hover { background: #1d4ed8; }
+        .btn-green { background: #16a34a; } .btn-green:hover { background: #15803d; }
+        .btn-purple { background: #7c3aed; } .btn-purple:hover { background: #6d28d9; }
+        .btn-orange { background: #ea580c; } .btn-orange:hover { background: #c2410c; }
+        .btn-red { background: #dc2626; } .btn-red:hover { background: #b91c1c; }
+        .upload-zone { border: 2px dashed #d1d5db; border-radius: 10px; padding: 40px; text-align: center; margin: 20px 0; }
+        .upload-zone:hover { border-color: #2563eb; background: #f8fafc; }
+        .result { padding: 15px; border-radius: 6px; margin: 10px 0; }
+        .success { background: #dcfce7; color: #166534; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .warning { background: #fef3c7; color: #92400e; }
+        .logs { background: #000; color: #00ff00; padding: 20px; border-radius: 10px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .product-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .product-image { width: 100%; height: 150px; object-fit: cover; }
+        .product-info { padding: 15px; }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .tag-cloudinary { background: #16a34a; color: white; }
+        .tag-local { background: #ea580c; color: white; }
+        input[type="file"] { display: none; }
+        .platform-info { display: flex; justify-content: space-between; align-items: center; background: #f9fafb; padding: 12px; border-radius: 6px; margin: 8px 0; }
+        #hostname { font-family: monospace; background: #e5e7eb; padding: 4px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧪 Test Final Complet - Mireb CRM</h1>
+            <p>Validation du fonctionnement des images Cloudinary et synchronisation des données</p>
+            <div class="status">
+                <div id="status-dot" class="status-dot"></div>
+                <span id="status-text">Initialisation...</span>
+                <span>|</span>
+                <span id="platform-info">Détection plateforme...</span>
+            </div>
+        </div>
+
+        <!-- Tests principaux -->
+        <div class="grid">
+            <!-- Diagnostic plateforme -->
+            <div class="card">
+                <h2>🖥️ Diagnostic de Plateforme</h2>
+                <div class="platform-info">
+                    <span>Hostname:</span>
+                    <code id="hostname">-</code>
+                </div>
+                <div class="platform-info">
+                    <span>Est Render:</span>
+                    <span id="is-render">-</span>
+                </div>
+                <div class="platform-info">
+                    <span>Est GitHub Pages:</span>
+                    <span id="is-github">-</span>
+                </div>
+                <div class="platform-info">
+                    <span>Mode recommandé:</span>
+                    <strong id="recommended-mode">-</strong>
+                </div>
+            </div>
+
+            <!-- Tests API -->
+            <div class="card">
+                <h2>🔌 Test API Backend</h2>
+                <button onclick="testAPI('/api/produits')" class="btn btn-blue">📦 Tester /api/produits</button><br>
+                <button onclick="testAPI('/api/leads')" class="btn btn-green">👥 Tester /api/leads</button><br>
+                <button onclick="testCloudinaryUpload()" class="btn btn-purple">☁️ Tester Upload Cloudinary</button>
+                <div id="api-results"></div>
+            </div>
+        </div>
+
+        <!-- Upload test -->
+        <div class="card">
+            <h2>📷 Test Upload Image</h2>
+            <div class="upload-zone" onclick="document.getElementById('test-file').click()">
+                <div style="font-size: 48px; margin-bottom: 15px;">☁️</div>
+                <p><strong>Cliquez pour sélectionner une image de test</strong></p>
+                <p style="font-size: 12px; color: #666; margin-top: 8px;">PNG, JPG, GIF jusqu'à 10MB</p>
+            </div>
+            <input type="file" id="test-file" accept="image/*" onchange="handleTestUpload(event)">
+            <div id="upload-status"></div>
+            <div id="upload-result"></div>
+        </div>
+
+        <!-- Produits existants -->
+        <div class="card">
+            <h2>📋 Produits Existants</h2>
+            <button onclick="loadProducts()" class="btn btn-orange">🔄 Charger les produits</button>
+            <div id="products-list" class="product-grid"></div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="card">
+            <h2>⚡ Actions Rapides</h2>
+            <button onclick="window.open('mireb-ai-crm-complete.html', '_blank')" class="btn btn-blue">🏠 Ouvrir CRM Principal</button>
+            <button onclick="window.open('https://mireb-5.onrender.com', '_blank')" class="btn btn-purple">🌐 Ouvrir Render</button>
+            <button onclick="testFullWorkflow()" class="btn btn-green">🔄 Test Complet</button>
+            <button onclick="clearAllData()" class="btn btn-red">🗑️ Nettoyer données</button>
+        </div>
+
+        <!-- Logs -->
+        <div class="card">
+            <h2>📝 Logs de Debug</h2>
+            <button onclick="clearLogs()" class="btn btn-red" style="float: right;">Effacer</button>
+            <div id="debug-logs" class="logs">En attente des tests...</div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let debugLogs = [];
+        const isRender = window.location.hostname.includes('onrender.com');
+        const isGitHub = window.location.hostname.includes('github.io');
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isRender ? 'https://mireb-5.onrender.com' : '';
+
+        // Fonction de logging améliorée
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            const logEntry = `[${timestamp}] ${emoji} ${message}`;
+            debugLogs.push(logEntry);
+            
+            if (debugLogs.length > 50) debugLogs.shift();
+            
+            document.getElementById('debug-logs').textContent = debugLogs.join('\n');
+            console.log(logEntry);
+        }
+
+        function clearLogs() {
+            debugLogs = [];
+            document.getElementById('debug-logs').textContent = 'Logs effacés...';
+        }
+
+        // Initialisation
+        function init() {
+            log('🚀 Initialisation du test final complet');
+            
+            // Détection de plateforme
+            const hostname = window.location.hostname;
+            document.getElementById('hostname').textContent = hostname;
+            document.getElementById('is-render').textContent = isRender ? '✅ Oui' : '❌ Non';
+            document.getElementById('is-github').textContent = isGitHub ? '✅ Oui' : '❌ Non';
+            
+            // Configuration par plateforme
+            if (isRender) {
+                document.getElementById('recommended-mode').innerHTML = '<span style="color: #16a34a;">API + Cloudinary</span>';
+                document.getElementById('platform-info').textContent = '🌐 Render (Production)';
+                document.getElementById('status-dot').style.background = '#16a34a';
+                document.getElementById('status-text').textContent = 'Prêt pour tests production';
+                log('Platform: Render - Mode production détecté');
+            } else if (isGitHub) {
+                document.getElementById('recommended-mode').innerHTML = '<span style="color: #2563eb;">LocalStorage + Fallback</span>';
+                document.getElementById('platform-info').textContent = '📱 GitHub Pages (Démo)';
+                document.getElementById('status-dot').style.background = '#2563eb';
+                document.getElementById('status-text').textContent = 'Mode démo actif';
+                log('Platform: GitHub Pages - Mode démo détecté');
+            } else {
+                document.getElementById('recommended-mode').innerHTML = '<span style="color: #ea580c;">Développement local</span>';
+                document.getElementById('platform-info').textContent = '💻 Localhost';
+                document.getElementById('status-dot').style.background = '#ea580c';
+                document.getElementById('status-text').textContent = 'Environnement de développement';
+                log('Platform: Local - Mode développement détecté');
+            }
+            
+            log(`Configuration: Render=${isRender}, GitHub=${isGitHub}, Local=${isLocal}`);
+        }
+
+        // Test API
+        async function testAPI(endpoint) {
+            const fullUrl = API_BASE + endpoint;
+            log(`🔗 Test API: ${fullUrl}`);
+            
+            try {
+                const response = await fetch(fullUrl);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ API ${endpoint} OK: ${Array.isArray(data) ? data.length + ' éléments' : 'Réponse valide'}`, 'success');
+                    document.getElementById('api-results').innerHTML += `
+                        <div class="result success">
+                            <strong>✅ ${endpoint}</strong><br>
+                            Status: ${response.status}<br>
+                            Data: ${Array.isArray(data) ? data.length + ' éléments' : 'Objet valide'}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Erreur API ${endpoint}: ${error.message}`, 'error');
+                document.getElementById('api-results').innerHTML += `
+                    <div class="result error">
+                        <strong>❌ ${endpoint}</strong><br>
+                        Erreur: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Test upload Cloudinary automatique
+        async function testCloudinaryUpload() {
+            log('🧪 Création et test d\'upload d\'image automatique');
+            
+            try {
+                // Créer une image de test
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // Dessiner un fond dégradé
+                const gradient = ctx.createLinearGradient(0, 0, 300, 200);
+                gradient.addColorStop(0, '#4F46E5');
+                gradient.addColorStop(1, '#7C3AED');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 300, 200);
+                
+                // Ajouter du texte
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('TEST MIREB', 150, 80);
+                ctx.font = '16px Arial';
+                ctx.fillText('Cloudinary Upload', 150, 110);
+                ctx.fillText(new Date().toLocaleString(), 150, 140);
+                
+                // Convertir en blob et uploader
+                canvas.toBlob(async (blob) => {
+                    if (!isRender) {
+                        log('⚠️ Test upload ignoré - pas sur Render', 'warning');
+                        document.getElementById('api-results').innerHTML += `
+                            <div class="result warning">
+                                <strong>⚠️ Upload Cloudinary</strong><br>
+                                Ignoré: Pas sur la plateforme Render
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('image', blob, 'test-mireb.png');
+                    
+                    try {
+                        const response = await fetch(API_BASE + '/api/upload/single', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok && result.success) {
+                            log(`✅ Upload Cloudinary réussi: ${result.data.url}`, 'success');
+                            document.getElementById('api-results').innerHTML += `
+                                <div class="result success">
+                                    <strong>✅ Upload Cloudinary</strong><br>
+                                    URL: <a href="${result.data.url}" target="_blank" style="color: #2563eb; text-decoration: underline;">Voir image</a>
+                                </div>
+                            `;
+                        } else {
+                            throw new Error(result.message || 'Upload échoué');
+                        }
+                    } catch (error) {
+                        log(`❌ Erreur upload: ${error.message}`, 'error');
+                        document.getElementById('api-results').innerHTML += `
+                            <div class="result error">
+                                <strong>❌ Upload Cloudinary</strong><br>
+                                Erreur: ${error.message}
+                            </div>
+                        `;
+                    }
+                }, 'image/png');
+                
+            } catch (error) {
+                log(`❌ Erreur création image test: ${error.message}`, 'error');
+            }
+        }
+
+        // Upload fichier utilisateur
+        async function handleTestUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            log(`📁 Upload fichier: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`);
+            
+            document.getElementById('upload-status').innerHTML = `
+                <div class="result info">
+                    🔄 Upload en cours: ${file.name}...
+                </div>
+            `;
+            
+            try {
+                if (isRender) {
+                    // Upload vers Cloudinary
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    const response = await fetch(API_BASE + '/api/upload/single', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        log(`✅ Upload Cloudinary réussi: ${result.data.url}`, 'success');
+                        showUploadResult(result.data.url, 'Cloudinary ☁️', true);
+                    } else {
+                        throw new Error(result.message || 'Upload API échoué');
+                    }
+                } else {
+                    // Fallback local
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        log(`📱 Sauvegarde locale réussie (mode démo)`, 'success');
+                        showUploadResult(e.target.result, 'Local (Démo) 📱', false);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                log(`❌ Erreur upload: ${error.message}`, 'error');
+                document.getElementById('upload-status').innerHTML = `
+                    <div class="result error">
+                        ❌ Erreur: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function showUploadResult(imageUrl, mode, isCloudinary) {
+            document.getElementById('upload-status').innerHTML = `
+                <div class="result success">
+                    ✅ Upload réussi vers ${mode}
+                </div>
+            `;
+            
+            document.getElementById('upload-result').innerHTML = `
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <strong>Résultat de l'upload</strong>
+                        <span class="tag ${isCloudinary ? 'tag-cloudinary' : 'tag-local'}">${mode}</span>
+                    </div>
+                    <img src="${imageUrl}" alt="Image uploadée" style="max-width: 100%; max-height: 200px; border-radius: 6px; margin-bottom: 10px;">
+                    <p style="font-size: 12px; color: #666; word-break: break-all;"><strong>URL:</strong> ${imageUrl}</p>
+                    <p style="font-size: 12px; margin-top: 8px; ${isCloudinary ? 'color: #16a34a;' : 'color: #2563eb;'}">
+                        ${isCloudinary ? '✅ Cette image sera visible sur tous les appareils' : '📱 Cette image n\'est visible que localement (mode démo)'}
+                    </p>
+                </div>
+            `;
+        }
+
+        // Charger produits
+        async function loadProducts() {
+            log('📦 Chargement des produits...');
+            
+            try {
+                let products;
+                let source;
+                
+                if (isRender) {
+                    const response = await fetch(API_BASE + '/api/produits');
+                    products = await response.json();
+                    source = 'API Backend';
+                } else {
+                    products = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+                    source = 'LocalStorage';
+                }
+                
+                displayProducts(products, source);
+            } catch (error) {
+                log(`❌ Erreur chargement produits: ${error.message}`, 'error');
+                document.getElementById('products-list').innerHTML = `
+                    <div class="result error">
+                        ❌ Erreur lors du chargement: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayProducts(products, source) {
+            const container = document.getElementById('products-list');
+            
+            if (!products || products.length === 0) {
+                container.innerHTML = `
+                    <div class="result warning">
+                        📦 Aucun produit trouvé<br>
+                        <small>Source: ${source}</small>
+                    </div>
+                `;
+                log(`📦 Aucun produit trouvé (source: ${source})`, 'warning');
+                return;
+            }
+            
+            log(`📦 ${products.length} produit(s) chargé(s) depuis ${source}`, 'success');
+            
+            container.innerHTML = products.map(product => {
+                const imageUrl = Array.isArray(product.images) ? product.images[0] : 
+                               (product.image || 'https://via.placeholder.com/300x200?text=Produit');
+                const isCloudinaryImage = imageUrl.includes('cloudinary.com') || imageUrl.includes('res.cloudinary.com');
+                
+                return `
+                    <div class="product-card">
+                        <img src="${imageUrl}" alt="${product.nom || 'Produit'}" class="product-image" 
+                             onerror="this.src='https://via.placeholder.com/300x200?text=Erreur+Image'">
+                        <div class="product-info">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                <h3 style="font-weight: bold; font-size: 16px;">${product.nom || 'Sans nom'}</h3>
+                                <span class="tag ${isCloudinaryImage ? 'tag-cloudinary' : 'tag-local'}">
+                                    ${isCloudinaryImage ? 'Cloudinary' : 'Local'}
+                                </span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 18px; font-weight: bold; color: #16a34a;">$${product.prix || '0'}</span>
+                                <span style="font-size: 12px; color: #666;">Stock: ${product.stock || '0'}</span>
+                            </div>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">${product.categorie || 'Non catégorisé'}</p>
+                            <div style="font-size: 11px; color: #999;">
+                                <p><strong>ID:</strong> ${product.id}</p>
+                                <p><strong>Images:</strong> ${Array.isArray(product.images) ? product.images.length : '1'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Test workflow complet
+        async function testFullWorkflow() {
+            log('🔄 Début du test workflow complet');
+            
+            // Nettoyer les résultats précédents
+            document.getElementById('api-results').innerHTML = '';
+            
+            // Test 1: API Produits
+            log('1️⃣ Test des produits...');
+            await testAPI('/api/produits');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test 2: API Leads
+            log('2️⃣ Test des leads...');
+            await testAPI('/api/leads');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test 3: Upload si sur Render
+            if (isRender) {
+                log('3️⃣ Test upload automatique...');
+                await testCloudinaryUpload();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // Test 4: Chargement produits
+            log('4️⃣ Chargement des produits...');
+            await loadProducts();
+            
+            log('✅ Test workflow complet terminé!', 'success');
+        }
+
+        // Nettoyer données
+        function clearAllData() {
+            if (confirm('⚠️ Êtes-vous sûr de vouloir nettoyer toutes les données locales ?')) {
+                localStorage.clear();
+                document.getElementById('products-list').innerHTML = '';
+                document.getElementById('api-results').innerHTML = '';
+                document.getElementById('upload-result').innerHTML = '';
+                document.getElementById('upload-status').innerHTML = '';
+                log('🗑️ Toutes les données locales ont été effacées', 'warning');
+            }
+        }
+
+        // Initialiser au chargement
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

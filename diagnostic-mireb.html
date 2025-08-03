@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST MIREB - Page de Diagnostic</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.1); 
+            backdrop-filter: blur(10px); 
+            border-radius: 20px; 
+            padding: 30px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 { 
+            text-align: center; 
+            font-size: 2.5em; 
+            margin-bottom: 10px; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .status { 
+            text-align: center; 
+            background: rgba(255,255,255,0.2); 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin: 20px 0; 
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+            margin: 30px 0; 
+        }
+        .card { 
+            background: rgba(255,255,255,0.15); 
+            padding: 25px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(5px);
+        }
+        .btn { 
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4); 
+            color: white; 
+            border: none; 
+            padding: 12px 25px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin: 5px; 
+            transition: transform 0.2s;
+        }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 10px; 
+            font-size: 14px;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); border-left: 4px solid #4CAF50; }
+        .error { background: rgba(244, 67, 54, 0.3); border-left: 4px solid #f44336; }
+        .info { background: rgba(33, 150, 243, 0.3); border-left: 4px solid #2196F3; }
+        .warning { background: rgba(255, 193, 7, 0.3); border-left: 4px solid #FFC107; }
+        .logs { 
+            background: rgba(0,0,0,0.7); 
+            color: #00ff00; 
+            padding: 20px; 
+            border-radius: 10px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px; 
+            max-height: 200px; 
+            overflow-y: auto; 
+            white-space: pre-wrap;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+            h1 { font-size: 2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 TEST MIREB CRM</h1>
+        <div class="status">
+            <h2>📊 Diagnostic Complet du Système</h2>
+            <p id="main-status">🔄 Initialisation en cours...</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>🌐 Informations Plateforme</h3>
+                <div id="platform-info">
+                    <p><strong>URL:</strong> <span id="current-url">-</span></p>
+                    <p><strong>Hostname:</strong> <span id="hostname">-</span></p>
+                    <p><strong>Protocol:</strong> <span id="protocol">-</span></p>
+                    <p><strong>Type:</strong> <span id="platform-type">-</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🔧 Tests Rapides</h3>
+                <button class="btn" onclick="testPrincipalCRM()">🏠 Test CRM Principal</button>
+                <button class="btn" onclick="testRenderAPI()">☁️ Test Render API</button>
+                <button class="btn" onclick="testLocalStorage()">💾 Test LocalStorage</button>
+                <div id="quick-results"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📋 Actions Disponibles</h3>
+            <button class="btn" onclick="openMainCRM()">🏠 Ouvrir CRM Principal</button>
+            <button class="btn" onclick="openRender()">🌐 Ouvrir Render</button>
+            <button class="btn" onclick="testFullSystem()">🧪 Test Complet</button>
+            <button class="btn" onclick="showDebugInfo()">🔍 Debug Info</button>
+        </div>
+
+        <div class="card">
+            <h3>📝 Console de Debug</h3>
+            <button class="btn" onclick="clearLogs()" style="float: right; background: linear-gradient(45deg, #ff4757, #ff3838);">🗑️ Clear</button>
+            <div id="debug-console" class="logs">🎯 Console prête - En attente des tests...</div>
+        </div>
+    </div>
+
+    <script>
+        let logs = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            const entry = `[${timestamp}] ${emoji} ${message}`;
+            logs.push(entry);
+            
+            if (logs.length > 30) logs.shift();
+            
+            document.getElementById('debug-console').textContent = logs.join('\n');
+            console.log(entry);
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById('debug-console').textContent = '🎯 Console effacée - Prête pour nouveaux tests...';
+        }
+
+        function init() {
+            log('🚀 Initialisation du diagnostic MIREB');
+            
+            // Informations de base
+            const url = window.location.href;
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            
+            document.getElementById('current-url').textContent = url;
+            document.getElementById('hostname').textContent = hostname;
+            document.getElementById('protocol').textContent = protocol;
+
+            // Détection de plateforme
+            let platformType = 'Local';
+            let statusMessage = '💻 Environnement de développement local';
+            
+            if (hostname.includes('github.io')) {
+                platformType = 'GitHub Pages';
+                statusMessage = '📱 GitHub Pages - Mode démo actif';
+            } else if (hostname.includes('onrender.com')) {
+                platformType = 'Render';
+                statusMessage = '☁️ Render - Mode production';
+            } else if (hostname.includes('codespaces')) {
+                platformType = 'GitHub Codespaces';
+                statusMessage = '🛠️ GitHub Codespaces - Environnement de développement';
+            } else if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+                platformType = 'Localhost';
+                statusMessage = '🏠 Serveur local';
+            }
+
+            document.getElementById('platform-type').textContent = platformType;
+            document.getElementById('main-status').textContent = statusMessage;
+            
+            log(`Platform détectée: ${platformType}`);
+            log(`URL complète: ${url}`);
+        }
+
+        async function testPrincipalCRM() {
+            log('🏠 Test du CRM principal...');
+            try {
+                const response = await fetch('./mireb-ai-crm-complete.html');
+                if (response.ok) {
+                    log('✅ CRM principal accessible', 'success');
+                    document.getElementById('quick-results').innerHTML += `
+                        <div class="result success">✅ CRM principal trouvé et accessible</div>
+                    `;
+                } else {
+                    throw new Error('CRM non accessible');
+                }
+            } catch (error) {
+                log(`❌ Erreur CRM: ${error.message}`, 'error');
+                document.getElementById('quick-results').innerHTML += `
+                    <div class="result error">❌ CRM principal non accessible</div>
+                `;
+            }
+        }
+
+        async function testRenderAPI() {
+            log('☁️ Test de l\'API Render...');
+            try {
+                const response = await fetch('https://mireb-5.onrender.com/api/produits');
+                const data = await response.json();
+                log(`✅ API Render OK: ${data.length} produits`, 'success');
+                document.getElementById('quick-results').innerHTML += `
+                    <div class="result success">✅ API Render: ${data.length} produits trouvés</div>
+                `;
+            } catch (error) {
+                log(`❌ API Render inaccessible: ${error.message}`, 'error');
+                document.getElementById('quick-results').innerHTML += `
+                    <div class="result warning">⚠️ API Render non accessible (normal en local)</div>
+                `;
+            }
+        }
+
+        function testLocalStorage() {
+            log('💾 Test du LocalStorage...');
+            try {
+                // Test écriture
+                localStorage.setItem('mireb_test', 'OK');
+                const test = localStorage.getItem('mireb_test');
+                
+                if (test === 'OK') {
+                    // Vérifier données existantes
+                    const produits = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+                    const leads = JSON.parse(localStorage.getItem('mireb_leads') || '[]');
+                    
+                    log(`✅ LocalStorage OK: ${produits.length} produits, ${leads.length} leads`, 'success');
+                    document.getElementById('quick-results').innerHTML += `
+                        <div class="result success">✅ LocalStorage: ${produits.length} produits, ${leads.length} leads</div>
+                    `;
+                    
+                    localStorage.removeItem('mireb_test');
+                } else {
+                    throw new Error('Échec du test d\'écriture');
+                }
+            } catch (error) {
+                log(`❌ LocalStorage error: ${error.message}`, 'error');
+                document.getElementById('quick-results').innerHTML += `
+                    <div class="result error">❌ LocalStorage non fonctionnel</div>
+                `;
+            }
+        }
+
+        function openMainCRM() {
+            log('🏠 Ouverture du CRM principal...');
+            window.open('./mireb-ai-crm-complete.html', '_blank');
+        }
+
+        function openRender() {
+            log('🌐 Ouverture de Render...');
+            window.open('https://mireb-5.onrender.com', '_blank');
+        }
+
+        async function testFullSystem() {
+            log('🧪 Début du test système complet...');
+            document.getElementById('quick-results').innerHTML = '';
+            
+            await testPrincipalCRM();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testRenderAPI();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            testLocalStorage();
+            
+            log('✅ Test système complet terminé!', 'success');
+        }
+
+        function showDebugInfo() {
+            log('🔍 Collecte des informations de debug...');
+            
+            const debugInfo = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                screenResolution: `${screen.width}x${screen.height}`,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                localStorage: !!window.localStorage,
+                sessionStorage: !!window.sessionStorage,
+                indexedDB: !!window.indexedDB
+            };
+            
+            log('Debug Info:', 'info');
+            Object.entries(debugInfo).forEach(([key, value]) => {
+                log(`  ${key}: ${value}`, 'info');
+            });
+        }
+
+        // Auto-initialisation
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Test automatique après 2 secondes
+        setTimeout(() => {
+            log('🔄 Lancement des tests automatiques...');
+            testFullSystem();
+        }, 2000);
+    </script>
+</body>
+</html>

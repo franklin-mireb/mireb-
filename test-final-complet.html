@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Final Complet - Mireb CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- Header de test -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg shadow-lg mb-6">
+            <h1 class="text-2xl font-bold flex items-center">
+                <i class="fas fa-flask mr-3"></i>
+                Test Final Complet - Mireb CRM
+            </h1>
+            <p class="mt-2 opacity-90">
+                Validation du fonctionnement des images Cloudinary et synchronisation des données
+            </p>
+            <div class="mt-4 flex items-center space-x-4 text-sm">
+                <div class="flex items-center">
+                    <div id="status-indicator" class="w-3 h-3 bg-yellow-400 rounded-full mr-2"></div>
+                    <span id="status-text">Initialisation...</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-globe mr-2"></i>
+                    <span id="platform-info">Détection de la plateforme...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tests de diagnostic -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+            <!-- Test de plateforme -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-server mr-2 text-blue-500"></i>
+                    Diagnostic de Plateforme
+                </h2>
+                <div id="platform-tests" class="space-y-3">
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span>Hostname:</span>
+                        <code class="text-sm" id="hostname">-</code>
+                    </div>
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span>Est Render:</span>
+                        <span id="is-render" class="text-sm">-</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span>Est GitHub Pages:</span>
+                        <span id="is-github" class="text-sm">-</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span>Mode recommandé:</span>
+                        <span id="recommended-mode" class="text-sm font-medium">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test API Backend -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-plug mr-2 text-green-500"></i>
+                    Test API Backend
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="testAPI('/api/produits')" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+                        <i class="fas fa-box mr-2"></i>
+                        Tester /api/produits
+                    </button>
+                    <button onclick="testAPI('/api/leads')" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600">
+                        <i class="fas fa-users mr-2"></i>
+                        Tester /api/leads
+                    </button>
+                    <button onclick="testCloudinaryUpload()" class="w-full bg-purple-500 text-white p-2 rounded hover:bg-purple-600">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>
+                        Tester Upload Cloudinary
+                    </button>
+                </div>
+                <div id="api-results" class="mt-4 text-sm"></div>
+            </div>
+        </div>
+
+        <!-- Test d'upload d'image -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-camera mr-2 text-purple-500"></i>
+                Test Upload Image Cloudinary
+            </h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
+                <input 
+                    type="file" 
+                    id="test-file-input" 
+                    accept="image/*" 
+                    class="hidden"
+                    onchange="handleTestUpload(event)"
+                >
+                <label for="test-file-input" class="cursor-pointer">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2 block"></i>
+                    <p class="text-gray-600">Cliquez pour sélectionner une image de test</p>
+                    <p class="text-sm text-gray-400">PNG, JPG, GIF jusqu'à 10MB</p>
+                </label>
+            </div>
+
+            <div id="upload-status" class="mb-4"></div>
+            <div id="upload-result" class="mb-4"></div>
+        </div>
+
+        <!-- Affichage des produits existants -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-list mr-2 text-orange-500"></i>
+                Produits Existants
+            </h2>
+            <button onclick="loadProducts()" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mb-4">
+                <i class="fas fa-sync mr-2"></i>
+                Charger les produits
+            </button>
+            <div id="products-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Logs de debug -->
+        <div class="bg-black text-green-400 p-4 rounded-lg shadow">
+            <h2 class="text-lg font-bold mb-4 flex items-center">
+                <i class="fas fa-terminal mr-2"></i>
+                Logs de Debug
+            </h2>
+            <div id="debug-logs" class="font-mono text-sm max-h-64 overflow-y-auto whitespace-pre-wrap"></div>
+            <button onclick="clearLogs()" class="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm">
+                <i class="fas fa-trash mr-1"></i>
+                Effacer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let debugLogs = [];
+        const isRender = window.location.hostname.includes('onrender.com');
+        const isGitHub = window.location.hostname.includes('github.io');
+        const API_BASE = isRender ? 'https://mireb-5.onrender.com' : '';
+
+        // Fonction de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            debugLogs.push(logEntry);
+            
+            // Garder seulement les 50 derniers logs
+            if (debugLogs.length > 50) {
+                debugLogs.shift();
+            }
+            
+            document.getElementById('debug-logs').textContent = debugLogs.join('\n');
+            console.log(logEntry);
+        }
+
+        function clearLogs() {
+            debugLogs = [];
+            document.getElementById('debug-logs').textContent = '';
+        }
+
+        // Initialisation
+        function init() {
+            log('🚀 Initialisation du test final complet');
+            
+            // Détection de plateforme
+            document.getElementById('hostname').textContent = window.location.hostname;
+            document.getElementById('is-render').textContent = isRender ? '✅ Oui' : '❌ Non';
+            document.getElementById('is-github').textContent = isGitHub ? '✅ Oui' : '❌ Non';
+            
+            if (isRender) {
+                document.getElementById('recommended-mode').textContent = 'API + Cloudinary';
+                document.getElementById('recommended-mode').className += ' text-green-600';
+                document.getElementById('platform-info').textContent = 'Render (Production)';
+                document.getElementById('status-indicator').className = 'w-3 h-3 bg-green-400 rounded-full mr-2';
+                document.getElementById('status-text').textContent = 'Prêt pour tests production';
+            } else if (isGitHub) {
+                document.getElementById('recommended-mode').textContent = 'LocalStorage + Fallback';
+                document.getElementById('recommended-mode').className += ' text-blue-600';
+                document.getElementById('platform-info').textContent = 'GitHub Pages (Démo)';
+                document.getElementById('status-indicator').className = 'w-3 h-3 bg-blue-400 rounded-full mr-2';
+                document.getElementById('status-text').textContent = 'Mode démo actif';
+            } else {
+                document.getElementById('recommended-mode').textContent = 'Développement local';
+                document.getElementById('recommended-mode').className += ' text-yellow-600';
+                document.getElementById('platform-info').textContent = 'Localhost';
+                document.getElementById('status-indicator').className = 'w-3 h-3 bg-yellow-400 rounded-full mr-2';
+                document.getElementById('status-text').textContent = 'Environnement de développement';
+            }
+            
+            log(`Platform: ${window.location.hostname}`);
+            log(`Render: ${isRender}, GitHub: ${isGitHub}`);
+        }
+
+        // Test API
+        async function testAPI(endpoint) {
+            const fullUrl = API_BASE + endpoint;
+            log(`🔗 Test API: ${fullUrl}`);
+            
+            try {
+                const response = await fetch(fullUrl);
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('api-results');
+                if (response.ok) {
+                    log(`✅ API ${endpoint} OK: ${JSON.stringify(data).substring(0, 100)}...`);
+                    resultDiv.innerHTML += `
+                        <div class="p-2 bg-green-100 text-green-800 rounded mb-2">
+                            <strong>✅ ${endpoint}</strong><br>
+                            Status: ${response.status}<br>
+                            Data: ${Array.isArray(data) ? data.length + ' éléments' : 'Objet'}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Erreur API ${endpoint}: ${error.message}`, 'error');
+                document.getElementById('api-results').innerHTML += `
+                    <div class="p-2 bg-red-100 text-red-800 rounded mb-2">
+                        <strong>❌ ${endpoint}</strong><br>
+                        Erreur: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Test upload Cloudinary
+        async function testCloudinaryUpload() {
+            log('🧪 Test upload Cloudinary (image de test)');
+            
+            try {
+                // Créer une image de test (canvas)
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // Dessiner un rectangle coloré avec du texte
+                ctx.fillStyle = '#4F46E5';
+                ctx.fillRect(0, 0, 200, 200);
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('TEST MIREB', 100, 90);
+                ctx.fillText(new Date().toLocaleTimeString(), 100, 120);
+                
+                // Convertir en blob
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('image', blob, 'test-image.png');
+                    
+                    const uploadUrl = API_BASE + '/api/upload/single';
+                    log(`📤 Upload vers: ${uploadUrl}`);
+                    
+                    try {
+                        const response = await fetch(uploadUrl, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok && result.success) {
+                            log(`✅ Upload Cloudinary réussi: ${result.data.url}`);
+                            document.getElementById('api-results').innerHTML += `
+                                <div class="p-2 bg-green-100 text-green-800 rounded mb-2">
+                                    <strong>✅ Upload Cloudinary</strong><br>
+                                    URL: <a href="${result.data.url}" target="_blank" class="text-blue-600 underline">Voir image</a>
+                                </div>
+                            `;
+                        } else {
+                            throw new Error(result.message || 'Upload échoué');
+                        }
+                    } catch (error) {
+                        log(`❌ Erreur upload: ${error.message}`, 'error');
+                        document.getElementById('api-results').innerHTML += `
+                            <div class="p-2 bg-red-100 text-red-800 rounded mb-2">
+                                <strong>❌ Upload Cloudinary</strong><br>
+                                Erreur: ${error.message}
+                            </div>
+                        `;
+                    }
+                }, 'image/png');
+                
+            } catch (error) {
+                log(`❌ Erreur création image test: ${error.message}`, 'error');
+            }
+        }
+
+        // Gestion upload fichier utilisateur
+        async function handleTestUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            log(`📁 Upload fichier utilisateur: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`);
+            
+            // Afficher le statut
+            document.getElementById('upload-status').innerHTML = `
+                <div class="flex items-center p-3 bg-blue-100 text-blue-800 rounded">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    Upload en cours: ${file.name}
+                </div>
+            `;
+            
+            try {
+                if (isRender) {
+                    // Upload vers Cloudinary via API
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    const response = await fetch(API_BASE + '/api/upload/single', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        log(`✅ Upload Cloudinary réussi: ${result.data.url}`);
+                        showUploadResult(result.data.url, 'Cloudinary', true);
+                    } else {
+                        throw new Error(result.message || 'Upload API échoué');
+                    }
+                } else {
+                    // Mode fallback - sauvegarde locale
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        log(`📱 Sauvegarde locale réussie (fallback)`);
+                        showUploadResult(e.target.result, 'Local (Démo)', false);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } catch (error) {
+                log(`❌ Erreur upload: ${error.message}`, 'error');
+                document.getElementById('upload-status').innerHTML = `
+                    <div class="flex items-center p-3 bg-red-100 text-red-800 rounded">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Erreur: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function showUploadResult(imageUrl, mode, isCloudinary) {
+            document.getElementById('upload-status').innerHTML = `
+                <div class="flex items-center p-3 bg-green-100 text-green-800 rounded">
+                    <i class="fas fa-check mr-2"></i>
+                    Upload réussi vers ${mode}
+                </div>
+            `;
+            
+            document.getElementById('upload-result').innerHTML = `
+                <div class="border rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold">Résultat de l'upload</h3>
+                        <span class="px-2 py-1 rounded text-xs ${isCloudinary ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                            ${mode}
+                        </span>
+                    </div>
+                    <img src="${imageUrl}" alt="Image uploadée" class="w-full max-w-sm rounded shadow mb-3">
+                    <p class="text-sm text-gray-600 break-all">
+                        <strong>URL:</strong> ${imageUrl}
+                    </p>
+                    ${isCloudinary ? '<p class="text-xs text-green-600 mt-2">✅ Cette image sera visible sur tous les appareils</p>' : '<p class="text-xs text-blue-600 mt-2">📱 Cette image n\'est visible que localement (mode démo)</p>'}
+                </div>
+            `;
+        }
+
+        // Charger et afficher les produits
+        async function loadProducts() {
+            log('📦 Chargement des produits...');
+            
+            try {
+                if (isRender) {
+                    // Charger depuis l'API
+                    const response = await fetch(API_BASE + '/api/produits');
+                    const products = await response.json();
+                    displayProducts(products, 'API Backend');
+                } else {
+                    // Charger depuis localStorage
+                    const products = JSON.parse(localStorage.getItem('mireb_produits') || '[]');
+                    displayProducts(products, 'LocalStorage');
+                }
+            } catch (error) {
+                log(`❌ Erreur chargement produits: ${error.message}`, 'error');
+                document.getElementById('products-list').innerHTML = `
+                    <div class="col-span-full p-4 bg-red-100 text-red-800 rounded">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Erreur lors du chargement des produits: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayProducts(products, source) {
+            const container = document.getElementById('products-list');
+            
+            if (!products || products.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-4 bg-yellow-100 text-yellow-800 rounded text-center">
+                        <i class="fas fa-box-open text-2xl mb-2 block"></i>
+                        <p>Aucun produit trouvé</p>
+                        <p class="text-sm">Source: ${source}</p>
+                    </div>
+                `;
+                log(`📦 Aucun produit trouvé (source: ${source})`);
+                return;
+            }
+            
+            log(`📦 ${products.length} produit(s) chargé(s) depuis ${source}`);
+            
+            container.innerHTML = products.map(product => {
+                const imageUrl = Array.isArray(product.images) ? product.images[0] : 
+                               (product.image || 'https://via.placeholder.com/300x200?text=Produit');
+                
+                const isCloudinaryImage = imageUrl.includes('cloudinary.com') || imageUrl.includes('res.cloudinary.com');
+                
+                return `
+                    <div class="bg-white border rounded-lg shadow hover:shadow-lg transition-shadow">
+                        <div class="relative">
+                            <img 
+                                src="${imageUrl}" 
+                                alt="${product.nom || 'Produit'}" 
+                                class="w-full h-48 object-cover rounded-t-lg"
+                                onerror="this.src='https://via.placeholder.com/300x200?text=Erreur+Image'"
+                            >
+                            <div class="absolute top-2 right-2">
+                                <span class="px-2 py-1 rounded text-xs ${isCloudinaryImage ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}">
+                                    ${isCloudinaryImage ? 'Cloudinary' : 'Local/Autre'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg mb-2">${product.nom || 'Sans nom'}</h3>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xl font-bold text-green-600">$${product.prix || '0'}</span>
+                                <span class="text-sm text-gray-500">Stock: ${product.stock || '0'}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">${product.categorie || 'Non catégorisé'}</p>
+                            <div class="text-xs text-gray-500">
+                                <p><strong>ID:</strong> ${product.id}</p>
+                                <p><strong>Images:</strong> ${Array.isArray(product.images) ? product.images.length : '1'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Initialiser au chargement de la page
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
